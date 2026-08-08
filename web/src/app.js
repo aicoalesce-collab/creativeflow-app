@@ -354,7 +354,9 @@ function toggleAutoUpdate(){
   renderTop();
 }
 function updateAvailable(){ return !!(state.latestVersion && verGt(state.latestVersion, APP_VERSION)); }
-function isDesktopApp(){ return location.hostname==='localhost' || location.hostname==='127.0.0.1'; }
+/* v5: the exe serves on 127.0.0.1:4879 specifically — a bare localhost check
+   would wrongly engage the /api proxy under dev/preview servers too. */
+function isDesktopApp(){ return (location.hostname==='localhost' || location.hostname==='127.0.0.1') && location.port==='4879'; }
 function verGt(a,b){
   const x = String(a||'').split('.').map(Number), y = String(b||'').split('.').map(Number);
   for(let i=0; i<Math.max(x.length,y.length); i++){ const d=(x[i]||0)-(y[i]||0); if(d) return d>0; }
@@ -530,7 +532,7 @@ async function doLogin(){
   const err = $('#login-err');
   err.style.display = 'none';
   const okUrl = (/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(url) && url.indexOf('/exec') !== -1)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(url);
+    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(url);
   if(!okUrl){
     err.textContent = 'That link doesn’t look like a Web app URL — it should start with https://script.google.com/ and end in /exec.';
     err.style.display='block'; return;
@@ -2326,5 +2328,7 @@ if(__rvTok){
 
 /* ── v5 ESM shim: the markup uses inline onclick handlers that expect the old
    global <script> scope — expose every top-level function on window so the
-   proven markup keeps working unchanged under Vite/ESM. ── */
+   proven markup keeps working unchanged under Vite/ESM. state/store/rv are
+   exposed too (Playwright suites and the console read them). ── */
+Object.assign(window, { state, store, rv });
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setupGoogleButton, startBrowserLogin, onGoogleCred, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, driveWhoAmI_, ensureStudioAccount_, loadGsi, driveToken, gFetch, ensureFolder_, driveFolder, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });
