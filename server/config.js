@@ -99,7 +99,15 @@ function listCfg_(key) {
   return String(cfg_(key, '')).split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; });
 }
 
-function tzStr_() { return String(cfg_('TIMEZONE', 'Asia/Calcutta')); }
+function tzStr_() { return String(cfg_('TIMEZONE', 'Asia/Kolkata')); }
+
+/** Asia/Calcutta and Asia/Kolkata are the SAME zone — Google normalises the
+ *  legacy name, and the old sheet's Config carries the legacy one. Compare
+ *  timezones through this or the setup assertion fails on a false mismatch. */
+function tzEq_(a, b) {
+  const norm = z => String(z || '').replace(/^Asia\/Calcutta$/, 'Asia/Kolkata');
+  return norm(a) === norm(b);
+}
 
 function teams_() {
   const sh = cfgSheet_();

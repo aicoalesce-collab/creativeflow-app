@@ -44,6 +44,10 @@ function setup() {
   orderSheets_(ss);
 
   const owner = ownerEmail_();
+  // Mint the owner's access code immediately: EMAIL_MUTE is YES on a fresh
+  // install, so nothing is emailed — the code is readable in Roster column G
+  // and returned below, which is how the first human gets in.
+  const ownerCode = mintCodeFor_(owner);
   const formUrl = cfg_('FORM_URL', '');
   safeSend_(owner, '[Task] ✅ CreativeFlow v5 installed',
     baseCard_('#27ae60', 'Your CreativeFlow system is live',
@@ -55,7 +59,10 @@ function setup() {
       (formUrl ? linkRow_('Task Request form', formUrl) : '')), '');
   flushMailQueue_();
   log_('setup', '', owner, 'setup complete v' + API_VERSION, true);
-  return 'setup complete';
+  const msg = 'SETUP COMPLETE. Sign in as ' + owner + ' with access code: ' + ownerCode +
+    '  (also in the Roster tab, column G). Email is muted until go-live.';
+  try { ss.toast(msg, '✅ CreativeFlow', 30); } catch (e) {}
+  return msg;
 }
 
 /** v5: the script/sheet/config timezones must agree — slot deadlines and the
@@ -64,7 +71,7 @@ function assertTz_() {
   const cfgTz = tzStr_();
   const scriptTz = Session.getScriptTimeZone();
   const sheetTz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
-  if (scriptTz !== cfgTz || sheetTz !== cfgTz) {
+  if (!tzEq_(scriptTz, cfgTz) || !tzEq_(sheetTz, cfgTz)) {
     throw new Error('TIMEZONE MISMATCH: script=' + scriptTz + ' sheet=' + sheetTz + ' config=' + cfgTz +
       ' — set the Apps Script project timezone AND the spreadsheet timezone to ' + cfgTz + ' before going live.');
   }
@@ -101,7 +108,7 @@ function buildConfig_(ss) {
     const rows = [
       ['Setting', 'Value', 'What it does'],
       ['ORG_NAME', 'Coalesce Eventz', 'Name used in alert emails.'],
-      ['TIMEZONE', 'Asia/Calcutta', 'Timezone for all dates, reminders and reports.'],
+      ['TIMEZONE', 'Asia/Kolkata', 'Timezone for all dates, reminders and reports.'],
       ['DUE_SOON_HOURS', 24, 'Send a "due soon" reminder this many hours before the deadline.'],
       ['DEFAULT_DUE_TIME', '18:00', 'Deadline time used when a task has a date but no time (24h format).'],
       ['OVERDUE_REPEAT_HOURS', 24, 'Repeat the overdue alert every N hours until the task is done.'],

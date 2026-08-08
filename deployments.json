@@ -1,4 +1,12 @@
 {
-  "staging": { "id": "", "url": "" },
-  "prod": { "id": "", "url": "" }
+  "sheetId": "1toQVSVnaHioYOKAUuE_hLxOqaYoErqXFdzlx2R_18_c",
+  "scriptId": "19qqZqazL5GkhXe2icGT8G49zH3DYWAKbjgwmVNGGSP8fkD1apJUi-qd6",
+  "staging": {
+    "id": "AKfycbxScLtKAoAek8xLhumeUAn9q6bARMX--ZvT31GQUDFtI8nUmN7HmIadeAoyGrFKEkVE",
+    "url": "https://script.google.com/macros/s/AKfycbxScLtKAoAek8xLhumeUAn9q6bARMX--ZvT31GQUDFtI8nUmN7HmIadeAoyGrFKEkVE/exec"
+  },
+  "prod": {
+    "id": "AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl",
+    "url": "https://script.google.com/macros/s/AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl/exec"
+  }
 }

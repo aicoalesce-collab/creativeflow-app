@@ -67,12 +67,16 @@ Filled in as they are created — keep current:
 
 | Item | Value |
 |---|---|
-| New Sheet URL | (after `clasp create`) |
-| Script ID | (`.clasp.json`) |
+| New Sheet | `1toQVSVnaHioYOKAUuE_hLxOqaYoErqXFdzlx2R_18_c` — https://docs.google.com/spreadsheets/d/1toQVSVnaHioYOKAUuE_hLxOqaYoErqXFdzlx2R_18_c/edit |
+| Script | `19qqZqazL5GkhXe2icGT8G49zH3DYWAKbjgwmVNGGSP8fkD1apJUi-qd6` — https://script.google.com/d/19qqZqazL5GkhXe2icGT8G49zH3DYWAKbjgwmVNGGSP8fkD1apJUi-qd6/edit |
 | STAGING deploymentId + /exec | (deployments.json) |
 | PROD deploymentId + /exec | (deployments.json) |
 | Pages URL | (after Phase 4) |
 | Old sheet (migration source, READ-ONLY) | (owner supplies at cutover) |
+
+Created 2026-08-08 with `clasp create-script --type sheets`. NOTE: clasp
+overwrites `appsscript.json` on create — the real manifest (Asia/Calcutta,
+webapp executeAs/access, oauthScopes) is in git; re-push if it ever resets.
 
 ## What v5 adds beyond the old system
 

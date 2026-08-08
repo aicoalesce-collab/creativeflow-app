@@ -1,17 +1,10 @@
 {
-  "timeZone": "Asia/Calcutta",
-  "runtimeVersion": "V8",
-  "exceptionLogging": "STACKDRIVER",
-  "oauthScopes": [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/forms",
-    "https://www.googleapis.com/auth/script.send_mail",
-    "https://www.googleapis.com/auth/script.scriptapp",
-    "https://www.googleapis.com/auth/script.container.ui",
-    "https://www.googleapis.com/auth/drive"
-  ],
+  "timeZone": "Asia/Kolkata",
   "webapp": {
-    "executeAs": "USER_DEPLOYING",
-    "access": "ANYONE_ANONYMOUS"
-  }
+    "access": "ANYONE_ANONYMOUS",
+    "executeAs": "USER_DEPLOYING"
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "oauthScopes": ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/forms", "https://www.googleapis.com/auth/script.send_mail", "https://www.googleapis.com/auth/script.scriptapp", "https://www.googleapis.com/auth/script.container.ui", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/script.external_request", "https://www.googleapis.com/auth/userinfo.email"],
+  "runtimeVersion": "V8"
 }

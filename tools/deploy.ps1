@@ -35,7 +35,7 @@ Push-Location "$root\server"
 try {
   clasp push -f
   if ($LASTEXITCODE) { throw "clasp push failed" }
-  $out = clasp version "v$Version" 2>&1 | Out-String
+  $out = clasp create-version "v$Version" 2>&1 | Out-String
   if ($LASTEXITCODE) { throw "clasp version failed: $out" }
   $n = [regex]::Match($out, '\d+').Value
   if (-not $n) { throw "could not read the new version number from: $out" }
@@ -43,14 +43,14 @@ try {
 
   if (-not $ProdOnly) {
     Write-Host "== staging =="
-    clasp deploy -i $dep.staging.id -V $n -d "staging v$Version"
+    clasp update-deployment $dep.staging.id -V $n -d "staging v$Version"
     if ($LASTEXITCODE) { throw "staging deploy failed" }
     & "$root\tools\smoke.ps1" -Url $dep.staging.url -ExpectV $Version
     if ($LASTEXITCODE) { throw "staging smoke failed — prod not touched" }
   }
 
   Write-Host "== prod =="
-  clasp deploy -i $dep.prod.id -V $n -d "prod v$Version"
+  clasp update-deployment $dep.prod.id -V $n -d "prod v$Version"
   if ($LASTEXITCODE) { throw "prod deploy failed" }
   & "$root\tools\smoke.ps1" -Url $dep.prod.url -ExpectV $Version
   if ($LASTEXITCODE) { throw "PROD SMOKE FAILED — investigate immediately" }

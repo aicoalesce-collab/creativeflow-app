@@ -172,14 +172,20 @@ function importChunk_(ss, old, tabKey, offset) {
       const sh = old.getSheetByName('Roster');
       const dst = ss.getSheetByName(SHEETS.ROSTER);
       if (!sh || sh.getLastRow() < 2) return { copied: 0, next: null };
-      if (offset === 0 && dst.getLastRow() > 1) dst.getRange(2, 1, dst.getLastRow() - 1, 7).clearContent();
+      // The owner's row is the key to the whole system — capture it BEFORE the
+      // wipe and restore it after, or importing a roster that lacks the owner
+      // locks everyone (including the admin API) out of the new sheet.
+      if (offset === 0) {
+        stashOwnerRow_(dst);
+        if (dst.getLastRow() > 1) dst.getRange(2, 1, dst.getLastRow() - 1, 7).clearContent();
+      }
       const total = sh.getLastRow() - 1;
       const n = Math.min(MIGRATE_CHUNK, total - offset);
       if (n <= 0) return { copied: 0, next: null };
       const vals = sh.getRange(2 + offset, 1, n, 7).getValues();
       dst.getRange(2 + offset, 1, n, 7).setValues(vals);
       const next = offset + n < total ? offset + n : null;
-      if (next === null) ensureTestBot_(dst);
+      if (next === null) { restoreOwnerRow_(dst); ensureTestBot_(dst); }
       return { copied: n, next: next };
     }
     case 'master': {
@@ -229,6 +235,35 @@ function plainCopy_(old, ss, oldName, newName, width, offset) {
   if (dst.getMaxRows() < 1 + offset + n) dst.insertRowsAfter(dst.getMaxRows(), 1 + offset + n - dst.getMaxRows());
   dst.getRange(2 + offset, 1, n, width).setValues(vals);
   return { copied: n, next: offset + n < total ? offset + n : null };
+}
+
+/** Remember the owner's roster row (name + code included) across a wipe. */
+function stashOwnerRow_(rosterSh) {
+  const owner = String(ownerEmail_()).trim().toLowerCase();
+  const last = rosterSh.getLastRow();
+  if (last < 2 || !owner) return;
+  const rows = rosterSh.getRange(2, 1, last - 1, 7).getValues();
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]).trim().toLowerCase() === owner) {
+      cfgSet_('OWNER_ROW_STASH', JSON.stringify(rows[i]));
+      return;
+    }
+  }
+}
+
+function restoreOwnerRow_(rosterSh) {
+  const owner = String(ownerEmail_()).trim().toLowerCase();
+  if (!owner) return;
+  const last = rosterSh.getLastRow();
+  const emails = last >= 2 ? rosterSh.getRange(2, 2, last - 1, 1).getValues().map(r => String(r[0]).trim().toLowerCase()) : [];
+  if (emails.indexOf(owner) !== -1) return; // the old roster already contains the owner
+  let row = null;
+  try { row = JSON.parse(String(cfg_('OWNER_ROW_STASH', '') || 'null')); } catch (e) {}
+  if (!row || !row.length) row = ['Coalesce', owner, (teams_()[0] || {}).team || 'Graphic', 'Super Admin', '', 'Yes', randomCode_()];
+  row[3] = 'Super Admin'; // the owner is always the Super Admin of their own sheet
+  row[5] = 'Yes';
+  rosterSh.appendRow(row);
+  cfgSet_('OWNER_ROW_STASH', '');
 }
 
 function ensureTestBot_(rosterSh) {

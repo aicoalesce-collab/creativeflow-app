@@ -17,6 +17,9 @@ function apiAdmin_(user, req) {
     case 'syncForm':        syncFormAssignees(); return { ok: true, result: 'form assignee list synced' };
     case 'generateCodes':   return { ok: true, result: generateAccessCodes() + ' new codes minted (existing codes untouched)' };
     case 'renameMember':    return adminRenameMember_(user, req);
+    case 'rosterList':      return { ok: true, roster: rosterWithCodes_() };
+    case 'rosterUpsert':    return adminRosterUpsert_(user, req);
+    case 'rosterRemove':    return adminRosterRemove_(user, req);
     case 'sendTestAlert':   sendTestAlert(); return { ok: true, result: 'test alert queued' };
     case 'archiveNow':      archiveDone(); return { ok: true, result: 'archive pass done' };
     case 'sweepNow':        sweep(); return { ok: true, result: 'sweep done' };
@@ -79,6 +82,71 @@ function adminSetConfig_(req) {
   // the daily trigger bakes the hour at install time — changing it must reinstall
   if (key === 'DIGEST_HOUR') installTriggers_();
   return { ok: true, key: key, value: String(val), note: key === 'DIGEST_HOUR' ? 'triggers reinstalled at the new hour' : undefined };
+}
+
+/** Add or update one roster person, keyed by email (the stable identity).
+ *  { op:'rosterUpsert', member:'<email>', name?, team?, role?, active?, code? }
+ *  NOTE the target is `member`, never `email` — `email` is the CALLER's auth
+ *  field on every request and would silently clobber the target. */
+function adminRosterUpsert_(user, req) {
+  const email = String(req.member || '').trim().toLowerCase();
+  if (!email || email.indexOf('@') < 1) return { ok: false, error: 'VALIDATION', message: 'Pass member:"<email>".' };
+  if (req.role !== undefined && ROLES.indexOf(String(req.role)) === -1) return { ok: false, error: 'VALIDATION', message: 'Role must be one of: ' + ROLES.join(', ') };
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.ROSTER);
+  const last = sh.getLastRow();
+  const rows = last >= 2 ? sh.getRange(2, 1, last - 1, 7).getValues() : [];
+  let row = -1;
+  for (let i = 0; i < rows.length; i++) if (String(rows[i][1]).trim().toLowerCase() === email) { row = i + 2; break; }
+
+  if (row === -1) {
+    const vals = [String(req.name || email.split('@')[0]), email, String(req.team || (teams_()[0] || {}).team || ''),
+      String(req.role || 'Member'), String(req.phone || ''), String(req.active) === 'No' ? 'No' : 'Yes',
+      String(req.code || randomCode_()).toUpperCase()];
+    sh.appendRow(vals);
+    row = sh.getLastRow();
+  } else {
+    const cur = rows[row - 2];
+    const vals = [
+      req.name !== undefined ? String(req.name) : cur[0],
+      email,
+      req.team !== undefined ? String(req.team) : cur[2],
+      req.role !== undefined ? String(req.role) : cur[3],
+      req.phone !== undefined ? String(req.phone) : cur[4],
+      req.active !== undefined ? (String(req.active) === 'No' ? 'No' : 'Yes') : cur[5],
+      req.code !== undefined ? String(req.code).toUpperCase() : (String(cur[6]).trim() || randomCode_()),
+    ];
+    sh.getRange(row, 1, 1, 7).setValues([vals]);
+  }
+  rebuildMemberTabs();
+  syncFormAssignees();
+  const saved = sh.getRange(row, 1, 1, 7).getValues()[0];
+  log_('roster', '', user.email, 'upsert ' + email + ' role=' + saved[3], true);
+  return { ok: true, person: { name: saved[0], email: saved[1], team: saved[2], role: saved[3], active: saved[5], code: saved[6] } };
+}
+
+/** Remove one roster person. Their TASKS are untouched — history is keyed by
+ *  name and stays readable; they simply can no longer sign in.
+ *  { op:'rosterRemove', member:'<email>', confirm:'REMOVE' } */
+function adminRosterRemove_(user, req) {
+  if (String(req.confirm) !== 'REMOVE') return { ok: false, error: 'VALIDATION', message: 'Pass confirm:"REMOVE".' };
+  const email = String(req.member || '').trim().toLowerCase();
+  if (!email) return { ok: false, error: 'VALIDATION', message: 'Pass member:"<email>" (the person to remove).' };
+  if (email === String(ownerEmail_()).trim().toLowerCase()) return { ok: false, error: 'FORBIDDEN', message: 'The sheet owner cannot be removed from the Roster.' };
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.ROSTER);
+  const last = sh.getLastRow();
+  if (last < 2) return { ok: false, error: 'NOT_FOUND', message: 'Roster is empty.' };
+  const rows = sh.getRange(2, 1, last - 1, 7).getValues();
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]).trim().toLowerCase() === email) {
+      const gone = rows[i];
+      sh.deleteRow(i + 2);
+      rebuildMemberTabs();
+      syncFormAssignees();
+      log_('roster', '', user.email, 'removed ' + email + ' (' + gone[0] + ', ' + gone[3] + ')', true);
+      return { ok: true, removed: { name: gone[0], email: gone[1], role: gone[3] }, note: 'Their tasks and history are untouched; they can no longer sign in.' };
+    }
+  }
+  return { ok: false, error: 'NOT_FOUND', message: email + ' is not in the Roster.' };
 }
 
 /** Atomically renames a person across every name-keyed column, then rebuilds
