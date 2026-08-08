@@ -75,13 +75,22 @@ test.describe('PWA + build artifacts', () => {
     expect(injected).toContain('window.CF_INJECTED_API = "https://x/exec";');
   });
 
-  test('Google LOGIN is gone from the shipped build (uploads still use GIS)', async () => {
+  test('the build talks to Google not at all — no sign-in of any kind', async () => {
     const html = fs.readFileSync(SINGLE, 'utf8');
     expect(html).not.toContain('googleLogin');                       // the retired API action
     expect(html).not.toMatch(/Sign in with Google|Continue with Google/);
     expect(html).not.toContain('google.accounts.id.renderButton');   // the login button
     expect(html).not.toContain('/oauth/start');                      // the exe PKCE flow
-    // GIS itself stays — Drive uploads need it
-    expect(html).toContain('accounts.google.com/gsi/client');
+    // and since uploads became server-mediated, the Google Identity library is
+    // no longer loaded either: no PC ever authenticates to Google
+    expect(html).not.toContain('accounts.google.com/gsi/client');
+    expect(html).not.toContain('initTokenClient');
+  });
+
+  test('uploads go through the server ticket, not a browser token', async () => {
+    const html = fs.readFileSync(SINGLE, 'utf8');
+    expect(html).toContain('uploadTicket');
+    expect(html).toContain('uploadFinish');
+    expect(html).toContain('origin');        // required for Drive to CORS-enable the session
   });
 });

@@ -5,6 +5,10 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 
+# a stale name in the window exposure list silently kills every click handler
+node "$root\scripts\check-exports.mjs"
+if ($LASTEXITCODE) { throw "check-exports failed" }
+
 Push-Location "$root\web"
 try {
   npm run build

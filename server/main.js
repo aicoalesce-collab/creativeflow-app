@@ -64,6 +64,8 @@ function routes_() {
     qcPass:        { lock: true, fn: apiQcPass_ },
     renewTask:     { lock: true, fn: apiRenewTask_ },
     acceptBrief:   { lock: true, fn: apiAcceptBrief_ },
+    uploadTicket:  { fn: apiUploadTicket_ },              // no lock: mints a Drive session, writes nothing
+    uploadFinish:  { lock: true, fn: apiUploadFinish_ },
     bulkCreate:    { lock: true, fn: apiBulkCreate_ },
     addReview:     { lock: true, fn: apiAddReview_ },
     resolveReview: { lock: true, fn: apiResolveReview_ },

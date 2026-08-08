@@ -1258,121 +1258,19 @@ let gTokenClient = null;
 
 /* Upload needs a Client ID (Config ▸ GOOGLE_CLIENT_ID) and the desktop app
    (Google only allows registered localhost origins). */
-/* v5: uploads work from ANY registrable origin (the hosted PWA, localhost, the
-   exe) — not just the exe. Apps-Script-served pages stay excluded because
-   Google won't register their origins. */
-function canDriveUpload(){ return !!state.googleClientId && canUseGoogle(); }
+/* v5: uploads need nothing from this PC — CreativeFlow holds the Drive
+   authorisation server-side, so this works in every browser, on phones, in the
+   desktop app and on the ?page=app fallback alike. */
+function canDriveUpload(){ return true; }
 function uplCentral(){ return state.uploadMode === 'central' && !!state.storageAccount; }
 let gAcctVerified = false;
-async function driveWhoAmI_(tok){
-  try{
-    const r = await gFetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress),storageQuota(limit,usage)', null, tok);
-    const j = await r.json();
-    return (j.user && j.user.emailAddress) || '';
-  }catch(e){ return ''; }
-}
-/* Central mode: uploads must come from the studio account (its 5 TB holds
-   everything). Verify the signed-in account; auto-reprompt once if wrong. */
-async function ensureStudioAccount_(tok){
-  if(!uplCentral() || gAcctVerified) return tok;
-  const want = String(state.storageAccount).toLowerCase();
-  const who = (await driveWhoAmI_(tok)).toLowerCase();
-  if(who === want){ gAcctVerified = true; return tok; }
-  gToken = { token:'', exp:0 };
-  renderUplCard('Pick the studio account (' + state.storageAccount + ') in the Google window…');
-  const t2 = await driveToken({ prompt:'select_account', login_hint: state.storageAccount });
-  const who2 = (await driveWhoAmI_(t2)).toLowerCase();
-  if(who2 === want){ gAcctVerified = true; return t2; }
-  gToken = { token:'', exp:0 };
-  throw new Error('Uploads go to the studio Drive (' + state.storageAccount + ') — in the Google window choose that account, not ' + (who2 || who || 'your personal one') + '. Ask the admin for its sign-in if this PC never used it.');
-}
-
-function loadGsi(){
-  return new Promise((res, rej)=>{
-    if(window.google && google.accounts && google.accounts.oauth2) return res();
-    if(!document.getElementById('gsi-js')){
-      const s = document.createElement('script');
-      s.id = 'gsi-js'; s.src = 'https://accounts.google.com/gsi/client';
-      document.head.appendChild(s);
-    }
-    const t0 = Date.now();
-    (function poll(){
-      if(window.google && google.accounts && google.accounts.oauth2) return res();
-      if(Date.now() - t0 > 12000) return rej(new Error('Google\'s sign-in script did not load — check the internet connection.'));
-      setTimeout(poll, 150);
-    })();
-  });
-}
-
-async function driveToken(overrides){
-  if(!overrides && gToken.token && Date.now() < gToken.exp - 60000) return gToken.token;
-  await loadGsi();
-  return new Promise((res, rej)=>{
-    try{
-      if(!gTokenClient){
-        gTokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: state.googleClientId,
-          scope: 'https://www.googleapis.com/auth/drive.file',
-          login_hint: uplCentral() ? state.storageAccount : undefined,
-          callback: ()=>{},
-        });
-      }
-      gTokenClient.callback = (resp)=>{
-        if(resp && resp.access_token){
-          gToken = { token: resp.access_token, exp: Date.now() + (Number(resp.expires_in||3600))*1000 };
-          res(gToken.token);
-        } else rej(new Error((resp && (resp.error_description||resp.error)) || 'Google did not grant access.'));
-      };
-      gTokenClient.error_callback = (e)=>{ rej(new Error((e && (e.message||e.type)) || 'The Google window was closed.')); };
-      gTokenClient.requestAccessToken(Object.assign({ prompt: '' }, overrides || {}));
-    }catch(e){ rej(e); }
-  });
-}
-
-async function gFetch(url, opts, tok){
-  const o = Object.assign({}, opts || {});
-  o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + tok });
-  const r = await fetch(url, o);
-  if(!r.ok){
-    let msg = 'HTTP ' + r.status;
-    try{ const j = await r.json(); msg = (j.error && j.error.message) || msg; }catch(e){}
-    const err = new Error(msg); err.status = r.status; throw err;
-  }
-  return r;
-}
-
-/* CreativeFlow/<YYYY-MM> — month folders keep 5 TB of deliverables tidy. */
-async function ensureFolder_(tok, name, parentId, cacheKey){
-  const cached = store.get(cacheKey);
-  if(cached){
-    try{
-      const r = await gFetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(cached)+'?fields=id,trashed', null, tok);
-      const j = await r.json();
-      if(j && j.id && !j.trashed) return j.id;
-    }catch(e){}
-    store.del(cacheKey);
-  }
-  const q = encodeURIComponent("name='"+name+"' and mimeType='application/vnd.google-apps.folder' and trashed=false" + (parentId? " and '"+parentId+"' in parents" : ""));
-  try{
-    const r = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)', null, tok);
-    const j = await r.json();
-    if(j.files && j.files.length){ store.set(cacheKey, j.files[0].id); return j.files[0].id; }
-  }catch(e){}
-  const meta = { name: name, mimeType: 'application/vnd.google-apps.folder' };
-  if(parentId) meta.parents = [parentId];
-  const r2 = await gFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
-    method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(meta),
-  }, tok);
-  const j2 = await r2.json();
-  store.set(cacheKey, j2.id);
-  return j2.id;
-}
-async function driveFolder(tok){
-  const acct = uplCentral() ? 'studio' : 'own';
-  const root = await ensureFolder_(tok, 'CreativeFlow', null, 'cf_dr_'+acct);
-  const ym = new Date().toISOString().slice(0,7);
-  return ensureFolder_(tok, ym, root, 'cf_dr_'+acct+'_'+ym);
-}
+/* v5: the browser-side Google sign-in used for uploads is GONE.
+   driveWhoAmI_ / ensureStudioAccount_ / loadGsi / driveToken / gFetch /
+   ensureFolder_ / driveFolder all existed so each PC could authenticate to
+   Drive itself. CreativeFlow now holds that authorisation server-side and
+   issues a one-time upload session instead (see startUpload + server/upload.js),
+   which is why uploads work on phones, on the fallback link and in the desktop
+   app without anyone signing into Google. Do not reintroduce them. */
 
 function pickUpload(taskId){
   if(upl.busy){ toast('One upload at a time — <b>'+esc(upl.name)+'</b> is still at '+upl.pct+'%.', true); return; }
@@ -1386,25 +1284,19 @@ async function startUpload(taskId, file){
   if(upl.busy) return;
   if(!file.size){ toast('That file is empty.', true); return; }
   upl = { busy:true, name:file.name, pct:0, taskId, cancel:false };
-  renderUplCard('Getting Google permission…');
+  renderUplCard('Preparing the upload…');
   try{
-    let tok = await driveToken();
-    tok = await ensureStudioAccount_(tok);
-    renderUplCard('Preparing the '+(uplCentral()? 'studio' : '')+' Drive folder…');
-    const folder = await driveFolder(tok);
-
-    /* open a resumable session */
-    const sres = await gFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json; charset=UTF-8',
-        'X-Upload-Content-Type': file.type || 'application/octet-stream',
-        'X-Upload-Content-Length': String(file.size),
-      },
-      body: JSON.stringify({ name: file.name, parents: [folder] }),
-    }, tok);
-    const session = sres.headers.get('Location') || sres.headers.get('location');
-    if(!session) throw new Error('Drive did not open an upload session.');
+    /* v5: NO Google sign-in on this PC. CreativeFlow itself is authorised, so
+       it opens the Drive session for us and we push the bytes straight to
+       Google with the one-time session URL it returns. */
+    const ticket = await api('uploadTicket', {
+      taskId, name: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      size: file.size,
+      origin: location.origin,   /* Drive needs this to CORS-enable the session */
+    });
+    const session = ticket.uploadUrl;
+    if(!session) throw new Error('CreativeFlow could not open a Drive upload session.');
 
     /* push chunks — the session URL survives wifi drops, we just resume */
     let sent = 0, fileJson = null, retries = 0;
@@ -1439,27 +1331,16 @@ async function startUpload(taskId, file){
     }
     if(!fileJson || !fileJson.id) throw new Error('Upload ended without a file id from Drive.');
 
-    /* share: anyone with the link can view (managers + guest links need this) */
-    renderUplCard('Setting “anyone with link” sharing…');
-    tok = await driveToken();
-    try{
-      await gFetch('https://www.googleapis.com/drive/v3/files/'+fileJson.id+'/permissions', {
-        method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ role:'reader', type:'anyone' }),
-      }, tok);
-    }catch(permErr){
-      toast('Uploaded, but Drive refused the sharing change — open the file in Drive and set “Anyone with the link”.', true);
-    }
-
-    /* write the link onto the task */
-    const link = 'https://drive.google.com/file/d/'+fileJson.id+'/view';
-    const j = await api('updateTask', { id: taskId, patch:{ deliverable: link }, fileId: fileJson.id });
+    /* the server shares it and attaches it — it owns the Drive permissions */
+    renderUplCard('Linking it to the task…');
+    const j = await api('uploadFinish', { taskId, fileId: fileJson.id });
+    if(j.warning) toast(esc(j.warning), true);
     upsert(j.task); state.lastSync = new Date(); renderAll();
     upl.busy = false; upl.pct = 100;
     renderUplCard();
     setTimeout(()=>{ if(!upl.busy){ const c = document.getElementById('upl-card'); if(c) c.innerHTML=''; } }, 6000);
-    toast('<b>'+esc(file.name)+'</b> is in the '+(uplCentral()? 'studio Drive' : 'your Drive')+' — the link saved itself to <b>'+esc(taskId)+'</b>.');
-    const mdel = document.getElementById('m-deliverable'); if(mdel) mdel.value = link;
+    toast('<b>'+esc(file.name)+'</b> is in the studio Drive — the link saved itself to <b>'+esc(taskId)+'</b>.');
+    const mdel = document.getElementById('m-deliverable'); if(mdel) mdel.value = j.link;
     if(rv.open && !rv.guest && rv.taskId === taskId){ rv.viewAs=''; rv.player=null; rv.ytFailed=false; rv.form=null; renderReview(); }
   }catch(err){
     upl.busy = false;
@@ -1469,7 +1350,6 @@ async function startUpload(taskId, file){
   }
 }
 
-/* ask Drive how much it already has (after a network drop) */
 async function uplStatus(session, total, fallback){
   try{
     const r = await fetch(session, { method:'PUT', headers:{ 'Content-Range': 'bytes */'+total } });
@@ -2544,4 +2424,4 @@ if(__rvTok){
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
 Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, allTeamsHtml, scopeSwitchHtml, canSeeAllTeams, periodDays_ });
-Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, driveWhoAmI_, ensureStudioAccount_, loadGsi, driveToken, gFetch, ensureFolder_, driveFolder, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });
+Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });
