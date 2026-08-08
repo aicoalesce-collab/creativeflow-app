@@ -21,6 +21,7 @@ function sweepBody_() {
   const soonMs = Number(cfg_('DUE_SOON_HOURS', 24)) * 3600 * 1000;
   const repeatMs = Number(cfg_('OVERDUE_REPEAT_HOURS', 24)) * 3600 * 1000;
   const ccFrom = Number(cfg_('CC_HEAD_FROM_ALERT_N', 2));
+  const overdue = [];   // collected, then rolled up per person (see below)
 
   data.forEach((r, i) => {
     const row = i + 2;
@@ -38,7 +39,7 @@ function sweepBody_() {
         if (email) {
           safeSend_(email, `[Task] ⏰ Due soon — ${id}: ${task.title}`,
             taskCard_(task, '#e67e22', 'This task is due soon',
-              `<p>Deadline: <b>${fmtDT_(due)}</b>. Update the status in the sheet once it's moving.</p>`), '');
+              `<p>Deadline: <b>${fmtDT_(due)}</b>. Update the status in the sheet once it's moving.</p>`), '', 'due-soon-each');
           master.getRange(row, COL.H_REMINDED).setValue(new Date());
           log_('due-soon', id, email, '', true);
         }
@@ -53,21 +54,59 @@ function sweepBody_() {
       const n = count + 1;
       const email = emailByName_(task.assignee);
       const heads = headsOf_(task.team).map(h => h.email).filter(x => x && x !== email);
-      const cc = (n >= ccFrom) ? heads.join(',') : '';
       const to = email || heads.join(',') || ownerEmail_();
 
-      safeSend_(to, `[Task] 🚨 OVERDUE (alert ${n}) — ${id}: ${task.title}`,
-        taskCard_(task, '#c0392b', 'This task is OVERDUE — please finish it first',
-          `<p>The deadline was <b>${fmtDT_(due)}</b>. This task now takes priority over everything else on your list.` +
-          (cc ? ' Your team head has been copied on this alert.' : '') + '</p>'), cc);
+      /* v5: ONE roll-up per person per day instead of one email per task.
+         With 11 tasks overdue that was 11 emails a day to chase 4 people —
+         the single loudest source of noise in the old system. Heads are only
+         copied from CC_HEAD_FROM_ALERT_N, computed per task and applied once. */
+      overdue.push({ to: to, task: task, due: due, n: n, ccHeads: (n >= ccFrom) ? heads : [] });
 
       master.getRange(row, COL.H_OD_COUNT).setValue(n);
       master.getRange(row, COL.H_OD_LAST).setValue(new Date());
       if (yes_('AUTO_URGENT_ON_OVERDUE') && r[COL.PRIORITY - 1] !== 'Urgent') {
         master.getRange(row, COL.PRIORITY).setValue('Urgent');
       }
-      log_('overdue-' + n, id, to + (cc ? ' cc:' + cc : ''), '', true);
+      log_('overdue-' + n, id, to, '', true);
     }
+  });
+
+  sendOverdueRollups_(overdue);
+}
+
+/** Groups the sweep's overdue hits by recipient and sends at most one email
+ *  each. At EMAIL_LEVEL=all the per-task style is preserved. */
+function sendOverdueRollups_(list) {
+  if (!list.length) return;
+  const perTask = mailLevel_() === 'all';
+  const byPerson = {};
+  list.forEach(function (x) { (byPerson[x.to] = byPerson[x.to] || []).push(x); });
+
+  Object.keys(byPerson).forEach(function (to) {
+    const items = byPerson[to].sort(function (a, b) { return a.due - b.due; });
+    const cc = items.reduce(function (acc, x) { return acc.concat(x.ccHeads); }, [])
+      .filter(function (e, i, a) { return e && a.indexOf(e) === i; }).join(',');
+
+    if (perTask) {
+      items.forEach(function (x) {
+        safeSend_(to, '[Task] 🚨 OVERDUE (alert ' + x.n + ') — ' + x.task.id + ': ' + x.task.title,
+          taskCard_(x.task, '#c0392b', 'This task is OVERDUE — please finish it first',
+            '<p>The deadline was <b>' + fmtDT_(x.due) + '</b>.</p>'), cc, 'overdue');
+      });
+      return;
+    }
+
+    const rows = items.map(function (x) {
+      return '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;white-space:nowrap"><b>' + esc_(x.task.id) + '</b></td>' +
+        '<td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc_(x.task.title) + '</td>' +
+        '<td style="padding:6px 10px;border-bottom:1px solid #eee;white-space:nowrap;color:#c0392b;font-weight:700">' + esc_(fmtDT_(x.due)) + '</td></tr>';
+    }).join('');
+    const n = items.length;
+    safeSend_(to, '[Task] 🚨 ' + n + ' overdue task' + (n > 1 ? 's' : '') + ' — please clear ' + (n > 1 ? 'these' : 'this') + ' first',
+      baseCard_('#c0392b', n + ' task' + (n > 1 ? 's are' : ' is') + ' overdue',
+        '<p>These are past their deadline and take priority over everything else on your list.' +
+        (cc ? ' Your team head is copied.' : '') + '</p>' +
+        '<table style="border-collapse:collapse;font-size:13px;width:100%">' + rows + '</table>'), cc, 'overdue');
   });
 }
 
@@ -106,17 +145,17 @@ function reviewSweepBody_() {
           .filter(function (x, ix, a) { return x && a.indexOf(x) === ix; }).join(',');
         if (to) safeSend_(to, '[Task] ⏰ Auto-approved (review window over) — ' + id,
           taskCard_(task, '#8e44ad', 'Closed automatically — nobody reviewed in time',
-            '<p>The ' + budget + '-working-day review window ran out, so this task closed as Done with an <b>auto-approved</b> flag. If changes are still needed, the assignee can press <b>Renew</b> — it becomes a fresh task and is counted.</p>'), '');
+            '<p>The ' + budget + '-working-day review window ran out, so this task closed as Done with an <b>auto-approved</b> flag. If changes are still needed, the assignee can press <b>Renew</b> — it becomes a fresh task and is counted.</p>'), '', 'auto-approved');
       } else if (used >= budget - 1 && !hasFlag_(r, 'rem6')) {
         addFlag_(master, row, 'rem6');
         if (reqEmail) safeSend_(reqEmail, '[Task] ⏳ LAST DAY to review — ' + id,
           taskCard_(task, '#c0392b', 'Review closes tomorrow',
-            '<p>One working day left. If nobody reviews, this auto-approves as Done.</p>' + roomBtn_(id)), '');
+            '<p>One working day left. If nobody reviews, this auto-approves as Done.</p>' + roomBtn_(id)), '', 'review-nag');
       } else if (used >= 3 && !hasFlag_(r, 'rem3')) {
         addFlag_(master, row, 'rem3');
         if (reqEmail) safeSend_(reqEmail, '[Task] ⏳ Still waiting for your review — ' + id,
           taskCard_(task, '#e67e22', 'Waiting on your review',
-            '<p>This has been in review for ' + Math.floor(used) + ' working days. It auto-approves at ' + budget + '.</p>' + roomBtn_(id)), '');
+            '<p>This has been in review for ' + Math.floor(used) + ' working days. It auto-approves at ' + budget + '.</p>' + roomBtn_(id)), '', 'review-nag');
       }
     }
   } catch (e) { log_('sweep-error', '', '', String(e), false); }

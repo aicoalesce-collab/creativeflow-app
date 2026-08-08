@@ -189,7 +189,7 @@ function apiCreate_(user, req) {
     const to = headsOf_(team).map(h => h.email).join(',') || ownerEmail_();
     safeSend_(to, '[Task] 🙋 New ' + team + ' task needs an assignee — ' + id,
       taskCard_(task, '#8e44ad', 'New task waiting for assignment',
-        '<p><b>' + esc_(user.name) + '</b> added this from the dashboard. Assign it and the member is notified automatically.</p>'), '');
+        '<p><b>' + esc_(user.name) + '</b> added this from the dashboard. Assign it and the member is notified automatically.</p>'), '', 'needs-assignee');
     info = 'sent to the ' + team + ' head for assignment';
   }
   log_('api-create', id, user.email, info, true);
@@ -285,7 +285,7 @@ function apiUpdate_(user, req) {
       const aEmail = emailByName_(curAssignee);
       if (aEmail && aEmail !== user.email) safeSend_(aEmail, '[Task] ✍️ Brief updated — ' + id,
         taskCard_(taskAt_(master, row), '#e67e22', 'The brief changed mid-work',
-          '<p><b>' + esc_(user.name) + '</b> updated the brief after you started. Open the task and press <b>Accept updated brief</b> to continue — this keeps everyone honest about scope.</p>'), '');
+          '<p><b>' + esc_(user.name) + '</b> updated the brief after you started. Open the task and press <b>Accept updated brief</b> to continue — this keeps everyone honest about scope.</p>'), '', 'brief-updated');
       notes.push('brief flagged for re-accept');
     }
   }
@@ -315,7 +315,7 @@ function apiUpdate_(user, req) {
       const task = taskAt_(master, row);
       if (heads) safeSend_(heads, '[Task] 📅 ' + user.name + ' rescheduled ' + id,
         taskCard_(task, '#e67e22', 'Deadline moved by the assignee',
-          '<p><b>' + esc_(user.name) + '</b> moved this task to <b>' + esc_(task.dueStr) + '</b> from the dashboard.</p>'), '');
+          '<p><b>' + esc_(user.name) + '</b> moved this task to <b>' + esc_(task.dueStr) + '</b> from the dashboard.</p>'), '', 'reschedule-head');
       notes.push('team head notified of the move');
     }
   }
@@ -382,7 +382,7 @@ function apiUpdate_(user, req) {
           const heads = headsOf_(team).map(function (h) { return h.email; }).filter(function (em) { return em && em !== user.email; }).join(',');
           if (heads) safeSend_(heads, '[Task] 🔎 QC check — ' + id + ': ' + task.title,
             taskCard_(task, '#5b5bd6', 'Quality-check this first',
-              '<p><b>' + esc_(user.name) + '</b> finished this task. Open the review room, check it, then <b>✓ Pass QC</b> to send it to the requester — or send changes back.</p>' + roomBtn_(id)), '');
+              '<p><b>' + esc_(user.name) + '</b> finished this task. Open the review room, check it, then <b>✓ Pass QC</b> to send it to the requester — or send changes back.</p>' + roomBtn_(id)), '', 'qc-request');
           notes.push('head asked to QC');
         } else {
           pingRequester_(master, row, team, user, task);
@@ -420,7 +420,7 @@ function apiRejectTask_(user, req) {
     .filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== user.email; }).join(',');
   if (to) safeSend_(to, '[Task] ✗ Rejected — ' + id + ': ' + task.title,
     taskCard_(task, '#c0392b', 'Task rejected',
-      '<p><b>' + esc_(user.name) + '</b> rejected this task.</p><p style="background:#fdecea;border-radius:8px;padding:10px 12px"><b>Reason:</b> ' + esc_(reason) + '</p><p>The task stays in the sheet for the record — it does not count as Done.</p>'), '');
+      '<p><b>' + esc_(user.name) + '</b> rejected this task.</p><p style="background:#fdecea;border-radius:8px;padding:10px 12px"><b>Reason:</b> ' + esc_(reason) + '</p><p>The task stays in the sheet for the record — it does not count as Done.</p>'), '', 'rejected');
   log_('reject', id, user.email, reason.slice(0, 80), true);
   return { ok: true, task: taskToApi_(fullRow_(master, row)) };
 }
@@ -455,7 +455,7 @@ function apiStartTask_(user, req) {
       const to = headsOf_(team).map(function (h) { return h.email; }).filter(function (em) { return em && em !== user.email; }).join(',');
       if (to) safeSend_(to, '[Task] 🙋 ' + user.name + ' picked up ' + id,
         taskCard_(task, '#5c8a72', 'Unassigned task claimed',
-          '<p><b>' + esc_(user.name) + '</b> started this unassigned task — it\'s now theirs. Reassign it from the dashboard if that\'s wrong.</p>'), '');
+          '<p><b>' + esc_(user.name) + '</b> started this unassigned task — it\'s now theirs. Reassign it from the dashboard if that\'s wrong.</p>'), '', 'claimed');
     } catch (e) {}
   }
   log_('start', id, user.email, claimed ? 'claimed' : '', true);
@@ -575,7 +575,7 @@ function apiBulkCreate_(user, req) {
       }).join('');
       safeSend_(to, '[Task] 🧺 ' + list.length + ' new ' + team + ' task' + (list.length > 1 ? 's' : '') + ' from ' + user.name,
         baseCard_('#8e44ad', list.length + ' tasks added in bulk',
-          '<p><b>' + esc_(user.name) + '</b> added these from the dashboard — assign the unassigned ones and everyone gets notified as usual.</p><table style="border-collapse:collapse;font-size:13px;width:100%">' + rowsHtml + '</table>'), '');
+          '<p><b>' + esc_(user.name) + '</b> added these from the dashboard — assign the unassigned ones and everyone gets notified as usual.</p><table style="border-collapse:collapse;font-size:13px;width:100%">' + rowsHtml + '</table>'), '', 'bulk-digest');
     });
   } catch (e) {}
   log_('bulk-create', created.map(function (t) { return t.id; }).join(' '), user.email, created.length + ' created, ' + errors.length + ' errors', true);

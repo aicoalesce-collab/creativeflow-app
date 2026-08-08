@@ -50,10 +50,15 @@ function selfCheck() {
       safeSend_(owner, 'CreativeFlow health FAIL ' + Utilities.formatDate(new Date(), tzStr_(), 'yyyy-MM-dd'),
         baseCard_('#c0392b', 'CreativeFlow may be down',
           '<p>The daily self-check could not reach the deployment AND no client has pinged in 24h.</p>' +
-          '<p>Recovery: open docs/DEPLOY.md in the creativeflow-v5 repo — verify the deployment via a real browser first (fetch tools lie about /exec).</p>'), '');
+          '<p>Recovery: open docs/DEPLOY.md in the creativeflow-v5 repo — verify the deployment via a real browser first (fetch tools lie about /exec).</p>'), '', 'health');
     } else if (Utilities.formatDate(new Date(), tzStr_(), 'EEEE') === 'Monday') {
       safeSend_(owner, '[Task] ✅ CreativeFlow weekly health: all green',
-        baseCard_('#27ae60', 'Monitor heartbeat', '<p>Self-check ran and the system looks healthy. (This Monday note proves the monitor itself is alive.)</p>'), '');
+        baseCard_('#27ae60', 'Monitor heartbeat',
+          '<p>Self-check ran and the system looks healthy. (This Monday note proves the monitor itself is alive.)</p>' +
+          (function () {
+            const n = retentionForecast_();
+            return n ? '<p>🗄 <b>' + n + '</b> uploaded file' + (n > 1 ? 's' : '') + ' will move to Drive Trash in the next 7 days (' + cfg_('DRIVE_EXPIRY_DAYS', 45) + '-day retention).</p>' : '';
+          })()), '', 'health');
     }
     log_('selfcheck', '', '', 'fetchOk=' + fetchOk + ' clientRecent=' + clientRecent, true);
   } catch (e) { log_('selfcheck', '', '', String(e), false); }

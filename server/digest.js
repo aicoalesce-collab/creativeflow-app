@@ -72,8 +72,8 @@ function dailyDigestBody_(force) {
       const what = m.role === 'Team Head' ? 'your team\'s top ' + list.length : 'your top ' + list.length;
       safeSend_(m.email, '[Task] ☀ ' + (m.role === 'Team Head' ? m.team + ' — today\'s top ' + list.length : 'Your top ' + list.length + ' tasks today'),
         baseCard_('#eb5b2d', 'Good morning — ' + what + ' pending task' + (list.length > 1 ? 's' : ''),
-          '<table style="border-collapse:collapse;font-size:13px;width:100%">' + digestRows_(list) + '</table>' +
-          '<p style="font-size:11px;color:#8a867c">Sorted: overdue first, then priority, then deadline. Open CreativeFlow to act on them.</p>'), '');
+          '<table style="border-collapse:collapse;font-size:13px;width:100%">' + digestRows_(list) + '</table>' + soonHtml +
+          '<p style="font-size:11px;color:#8a867c">Sorted: overdue first, then priority, then deadline. Open CreativeFlow to act on them.</p>'), '', 'digest');
     });
     log_('digest', 'daily', 'system', people.length + ' people considered', true);
   } catch (e) { log_('digest-error', '', '', String(e), false); }

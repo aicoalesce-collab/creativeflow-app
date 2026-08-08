@@ -73,11 +73,14 @@ function adminReport_() {
 function adminSetConfig_(req) {
   const key = String(req.key || '').trim();
   const val = req.value;
-  const ALLOWED = ['EMAIL_MUTE', 'APP_BASE_URL', 'ORG_NAME', 'DIGEST_HOUR', 'STORAGE_ACCOUNT', 'GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY',
+  const ALLOWED = ['EMAIL_MUTE', 'EMAIL_LEVEL', 'APP_BASE_URL', 'DRIVE_EXPIRY_DAYS', 'DRIVE_PURGE_DAYS', 'ORG_NAME', 'DIGEST_HOUR', 'STORAGE_ACCOUNT', 'GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY',
     'DUE_SOON_HOURS', 'OVERDUE_REPEAT_HOURS', 'CC_HEAD_FROM_ALERT_N', 'AUTO_URGENT_ON_OVERDUE', 'EMAIL_ON_ASSIGNMENT',
     'NOTIFY_REQUESTER_ON_DONE', 'DAILY_DIGEST', 'ARCHIVE_AFTER_DAYS', 'MAX_ROUNDS', 'REVIEW_WINDOW_DAYS',
     'SLOT_EVE', 'SLOT_NOON', 'CREATE_CUTOFF', 'WEEKLY_OFF', 'EXTRA_WORK_DATES', 'HOLIDAY_DATES', 'UPLOAD_MODE', 'DRIVE_EXPIRY_DAYS'];
   if (ALLOWED.indexOf(key) === -1) return { ok: false, error: 'VALIDATION', message: 'Config key not settable remotely: ' + key };
+  if (key === 'EMAIL_LEVEL' && ['all', 'balanced', 'minimal'].indexOf(String(val).toLowerCase()) === -1) {
+    return { ok: false, error: 'VALIDATION', message: 'EMAIL_LEVEL must be all, balanced or minimal.' };
+  }
   cfgSet_(key, val);
   // the daily trigger bakes the hour at install time — changing it must reinstall
   if (key === 'DIGEST_HOUR') installTriggers_();

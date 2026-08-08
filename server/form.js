@@ -85,7 +85,7 @@ function handleFormSubmit(e) {
       const to = heads.map(h => h.email).join(',') || ownerEmail_();
       safeSend_(to, `[Task] 🙋 New ${team} task needs an assignee — ${id}`,
         taskCard_(task, '#8e44ad', 'New task waiting for assignment',
-          `<p><b>${esc_(requesterName)}</b> submitted this task without an assignee. Open the master sheet and pick a person in the <b>Assigned To</b> column — they'll be notified automatically.</p>`), '');
+          `<p><b>${esc_(requesterName)}</b> submitted this task without an assignee. Open the master sheet and pick a person in the <b>Assigned To</b> column — they'll be notified automatically.</p>`), '', 'needs-assignee');
       log_('task-created', id, to, 'Unassigned; head notified', true);
     }
   } catch (err) {

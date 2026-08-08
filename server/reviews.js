@@ -103,12 +103,17 @@ function apiAddReview_(user, req) {
   if (type === 'comment') {
     const assignee = String(t.cur[COL.ASSIGNEE - 1]).trim();
     const requester = String(t.cur[COL.REQUESTER - 1]).trim();
-    const to = [emailByName_(assignee), emailByName_(requester)]
-      .concat(headsOf_(t.team).map(function (h) { return h.email; }))
-      .filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== user.email; }).join(',');
-    if (to) safeSend_(to, '[Task] 💬 New comment on ' + taskId,
+    /* Balanced: the two people actually doing the work, not the whole chain,
+       and at most one email per task per hour however many comments land. */
+    const wide = mailLevel_() === 'all';
+    const people = [emailByName_(assignee), emailByName_(requester)]
+      .concat(wide ? headsOf_(t.team).map(function (h) { return h.email; }) : []);
+    const to = people.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== user.email; }).join(',');
+    const throttled = !wide && mailThrottled_('cmt_' + taskId, 60);
+    if (throttled) log_('held-throttle', taskId, to, 'comment burst on ' + taskId, true);
+    if (to && !throttled) safeSend_(to, '[Task] 💬 New comment on ' + taskId,
       baseCard_('#5b5bd6', 'New comment · ' + taskId,
-        '<p><b>' + esc_(user.name) + '</b> commented on “' + esc_(String(t.cur[COL.TITLE - 1])) + '”:</p><p style="background:#f4f4f0;border-radius:8px;padding:10px 12px">' + esc_(text) + '</p>'), '');
+        '<p><b>' + esc_(user.name) + '</b> commented on “' + esc_(String(t.cur[COL.TITLE - 1])) + '”:</p><p style="background:#f4f4f0;border-radius:8px;padding:10px 12px">' + esc_(text) + '</p>'), '', 'comment');
   }
   log_('review-add', taskId, user.email, type + ': ' + text.slice(0, 60), true);
   return { ok: true, item: reviewRowToObj_(rowVals) };
@@ -178,7 +183,7 @@ function apiSendChanges_(user, req) {
   if (to) safeSend_(to, '[Task] 🔁 ' + open.length + ' change' + (open.length > 1 ? 's' : '') + ' requested — ' + taskId,
     baseCard_('#8e44ad', open.length + ' change' + (open.length > 1 ? 's' : '') + ' on “' + esc_(String(t.cur[COL.TITLE - 1])) + '”',
       '<p><b>' + esc_(user.name) + '</b> reviewed your work. Open the Review room in CreativeFlow to see each point in place.</p>' +
-      '<table style="border-collapse:collapse;font-size:13px;width:100%">' + rows + '</table>'), cc);
+      '<table style="border-collapse:collapse;font-size:13px;width:100%">' + rows + '</table>'), cc, 'send-changes');
   log_('send-changes', taskId, user.email, open.length + ' markers', true);
   return { ok: true, count: open.length, task: upd.task };
 }
@@ -229,7 +234,7 @@ function apiGuestComment_(req) {
       .filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(',');
     if (to) safeSend_(to, '[Task] 💬 Client comment on ' + share.taskId,
       baseCard_('#eb5b2d', 'Guest comment · ' + share.taskId,
-        '<p><b>' + esc_(name) + '</b> (via share link) commented on “' + esc_(String(cur[COL.TITLE - 1])) + '”:</p><p style="background:#f4f4f0;border-radius:8px;padding:10px 12px">' + esc_(text) + '</p>'), '');
+        '<p><b>' + esc_(name) + '</b> (via share link) commented on “' + esc_(String(cur[COL.TITLE - 1])) + '”:</p><p style="background:#f4f4f0;border-radius:8px;padding:10px 12px">' + esc_(text) + '</p>'), '', 'guest-comment');
   }
   log_('guest-comment', share.taskId, name, text.slice(0, 60), true);
   return { ok: true, item: reviewRowToObj_(rowVals) };

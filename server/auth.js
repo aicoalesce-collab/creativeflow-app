@@ -54,7 +54,7 @@ function generateAccessCodes() {
       baseCard_('#1a73e8', 'Your access code',
         '<p>Open CreativeFlow and sign in with:</p>' +
         '<p>Email: <b>' + esc_(email) + '</b><br>Access code: <b style="font-size:19px;letter-spacing:3px">' + esc_(code) + '</b></p>' +
-        '<p>Keep it private — it identifies you and controls what you can edit.</p>'), '');
+        '<p>Keep it private — it identifies you and controls what you can edit.</p>'), '', 'codes');
   });
   flushMailQueue_();
   log_('codes', '', '', made + ' new codes minted', true);

@@ -127,13 +127,15 @@ function buildConfig_(ss) {
       ['WEEKLY_OFF', 'Sunday', 'Comma list of weekly off days.'],
       ['EXTRA_WORK_DATES', '', 'Comma list yyyy-mm-dd — off days that ARE working (e.g. a working Sunday).'],
       ['HOLIDAY_DATES', '', 'Comma list yyyy-mm-dd — extra holidays.'],
-      ['DRIVE_EXPIRY_DAYS', 0, 'Uploaded files expire after this many days (0 = never).'],
+      ['DRIVE_EXPIRY_DAYS', 45, 'Uploaded files move to Drive Trash this many days after upload (0 = never). Trash still uses storage until DRIVE_PURGE_DAYS.'],
       ['UPLOAD_MODE', 'central', 'central = everything lands on the studio Drive; own = each member\'s Drive.'],
       ['STORAGE_ACCOUNT', '', 'The studio Google account whose Drive holds all uploads.'],
       ['GOOGLE_CLIENT_ID', '', 'Web OAuth client id — enables in-app Drive uploads.'],
       ['GOOGLE_API_KEY', '', 'Drive API key — enables realtime video playback in the review room.'],
       ['APP_BASE_URL', '', 'The hosted app URL (GitHub Pages) — used in email deep links.'],
       ['EMAIL_MUTE', 'YES', 'YES = log every email instead of sending (testing / migration). Set NO to go live.'],
+      ['EMAIL_LEVEL', 'balanced', 'How chatty: all | balanced | minimal. Balanced rolls chasers into one email per person per day.'],
+      ['DRIVE_PURGE_DAYS', 60, 'Uploaded files are permanently deleted this many days after upload (frees storage). 0 = never.'],
       ['FORM_URL', '', 'Filled automatically — link to the Task Request form.'],
       ['FORM_EDIT_URL', '', 'Filled automatically — link to edit the form.'],
       ['SCHEMA_V', '5.0', 'Managed by the app — do not edit.'],
@@ -347,6 +349,7 @@ function installTriggers_() {
   ScriptApp.newTrigger('archiveDone').timeBased().onMonthDay(1).atHour(3).create();
   ScriptApp.newTrigger('weeklyBackup').timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(3).create(); // v5
   ScriptApp.newTrigger('selfCheck').timeBased().everyDays(1).atHour(8).create();   // v5
+  ScriptApp.newTrigger('retentionSweep').timeBased().everyDays(1).atHour(4).create(); // v5: Drive retention
   ScriptApp.newTrigger('extSync').timeBased().everyMinutes(10).create();           // v5: assigner sheets (10 min + hash fast-path keeps trigger quota safe)
-  log_('triggers', '', '', '9 triggers installed', true);
+  log_('triggers', '', '', '10 triggers installed', true);
 }

@@ -16,11 +16,56 @@
 let MAIL_QUEUE = [];
 let CURRENT_ACTOR = ''; // set by dispatch for authed calls; '' for triggers/public
 
-function safeSend_(to, subject, html, cc) {
+/**
+ * EMAIL_LEVEL (Config) decides how chatty the system is. Volume matters: a
+ * consumer Gmail account sends ~100/day, and the old system burned that in
+ * minutes and then failed silently 2,446 times.
+ *
+ *   all      — every event, immediately (the old behaviour)
+ *   balanced — DEFAULT. Time-critical events stay instant; chasers roll up into
+ *              one email per person per day; comments notify fewer people and
+ *              are throttled per task; heads are copied later in the ladder.
+ *   minimal  — only what a person cannot discover by opening the app:
+ *              work assigned to them, changes requested, rejections, client
+ *              comments, and the morning digest.
+ *
+ * Every suppressed message is still written to the Alerts Log, so nothing is
+ * invisible — it just isn't emailed.
+ */
+const MAIL_ALWAYS = ['assigned', 'revision', 'send-changes', 'rejected', 'guest-comment', 'digest', 'codes', 'health', 'test'];
+const MAIL_BALANCED_ONLY = ['due-soon-each', 'comment-wide', 'claimed', 'reschedule-head'];
+
+function mailLevel_() {
+  const v = String(cfg_('EMAIL_LEVEL', 'balanced')).trim().toLowerCase();
+  return (v === 'all' || v === 'minimal') ? v : 'balanced';
+}
+
+function mailAllowed_(kind) {
+  const lvl = mailLevel_();
+  if (lvl === 'all') return true;
+  if (!kind) return lvl !== 'minimal';
+  if (MAIL_ALWAYS.indexOf(kind) > -1) return true;
+  if (lvl === 'minimal') return false;
+  return MAIL_BALANCED_ONLY.indexOf(kind) === -1; // balanced drops only these
+}
+
+/** Per-task throttle so a burst of comments becomes one email, not five. */
+function mailThrottled_(key, minutes) {
+  if (!key) return false;
+  try {
+    const c = CacheService.getScriptCache();
+    const k = 'mt_' + key;
+    if (c.get(k)) return true;
+    c.put(k, '1', Math.max(60, minutes * 60));
+  } catch (e) {}
+  return false;
+}
+
+function safeSend_(to, subject, html, cc, kind) {
   if (!to) return;
   // actor is stamped PER MESSAGE — extsync impersonates different assigners in
   // one execution, and CURRENT_ACTOR may already be restored by flush time.
-  MAIL_QUEUE.push({ to: String(to), subject: String(subject), html: String(html), cc: String(cc || ''), actor: CURRENT_ACTOR });
+  MAIL_QUEUE.push({ to: String(to), subject: String(subject), html: String(html), cc: String(cc || ''), actor: CURRENT_ACTOR, kind: String(kind || '') });
 }
 
 function flushMailQueue_() {
@@ -34,6 +79,8 @@ function flushMailQueue_() {
     if (!clean) return;
     if (muted) { log_('muted', '', clean, m.subject, true); return; }
     if (/@example\.com$/i.test(m.actor || '')) { log_('muted-actor', '', clean, m.subject + ' (actor ' + m.actor + ')', true); return; }
+    // EMAIL_LEVEL gate — suppressed mail is logged, never silently lost
+    if (!mailAllowed_(m.kind)) { log_('held-' + mailLevel_(), '', clean, m.subject + ' [' + m.kind + ']', true); return; }
     try {
       if (MailApp.getRemainingDailyQuota() < 1) { log_('quota', '', clean, 'Daily email quota exhausted', false); return; }
       const opts = { to: clean, subject: m.subject, htmlBody: m.html, name: cfg_('ORG_NAME', 'Task System') + ' · Tasks' };
@@ -110,7 +157,7 @@ function notifyAssignee_(sheet, row, kind) {
     color = '#e67e22'; headline = 'The deadline for this task changed';
     note = `<p>New deadline: <b>${task.dueStr || '—'}</b>.</p>`;
   }
-  safeSend_(email, subject, taskCard_(task, color, headline, note), '');
+  safeSend_(email, subject, taskCard_(task, color, headline, note), '', kind === 'assigned' ? 'assigned' : (kind === 'revision' ? 'revision' : 'reschedule'));
   log_(kind, task.id, email, '', true);
 }
 
@@ -123,7 +170,7 @@ function notifyDone_(sheet, row) {
   safeSend_(to, `[Task] ✅ Completed — ${task.id}: ${task.title}`,
     taskCard_(task, '#27ae60', 'Task completed',
       `<p><b>${esc_(task.assignee)}</b> marked this task Done.` +
-      (task.deliverable ? ` Deliverable: <a href="${escAttr_(task.deliverable)}">open link</a>.` : '') + '</p>'), '');
+      (task.deliverable ? ` Deliverable: <a href="${escAttr_(task.deliverable)}">open link</a>.` : '') + '</p>'), '', 'done');
   log_('done', task.id, to, '', true);
 }
 
@@ -149,6 +196,6 @@ function sendTestAlert() {
   };
   safeSend_(me, '[Task] ✉️ Test alert — your notifications work',
     taskCard_(demo, '#1a73e8', 'This is what task alerts look like',
-      '<p>If you can read this, email notifications are working. Tip: create a Gmail filter for subject <b>[Task]</b> → label it, and switch ON phone notifications for that label in the Gmail app.</p>'), '');
+      '<p>If you can read this, email notifications are working. Tip: create a Gmail filter for subject <b>[Task]</b> → label it, and switch ON phone notifications for that label in the Gmail app.</p>'), '', 'test');
   flushMailQueue_();
 }
