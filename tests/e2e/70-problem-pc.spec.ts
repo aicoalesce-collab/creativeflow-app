@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { spawnMock, waitMock, hermetic, USERS } from './helpers';
+import { spawnMock, waitMock, hermetic, useMock, USERS } from './helpers';
 
 /**
  * THE CROWN JEWEL SUITE — the studio PC that stalls on large HTTPS responses.
@@ -13,9 +13,9 @@ test.describe('problem-PC conditions', () => {
     await waitMock(m.url);
     try {
       await hermetic(page);
+      await useMock(page, m.url);
       await page.goto('/');
       const t0 = Date.now();
-      await page.fill('#in-url', m.url);
       await page.fill('#in-email', USERS.admin.email);
       await page.fill('#in-code', USERS.admin.code);
       await page.click('#login-btn');
@@ -33,8 +33,8 @@ test.describe('problem-PC conditions', () => {
     await waitMock(m.url);
     try {
       await hermetic(page);
+      await useMock(page, m.url);
       await page.goto('/');
-      await page.fill('#in-url', m.url);
       await page.fill('#in-email', USERS.admin.email);
       await page.fill('#in-code', USERS.admin.code);
       await page.click('#login-btn');
@@ -53,8 +53,8 @@ test.describe('problem-PC conditions', () => {
     await waitMock(m.url);
     try {
       await hermetic(page);
+      await useMock(page, m.url);
       await page.goto('/');
-      await page.fill('#in-url', m.url);
       await page.fill('#in-email', USERS.memberG.email);
       await page.fill('#in-code', USERS.memberG.code);
       await page.click('#login-btn');
@@ -68,8 +68,8 @@ test.describe('problem-PC conditions', () => {
     await waitMock(m.url);
     try {
       await hermetic(page);
+      await useMock(page, m.url);
       await page.goto('/');
-      await page.fill('#in-url', m.url);
       await page.fill('#in-email', USERS.admin.email);
       await page.fill('#in-code', USERS.admin.code);
       await page.click('#login-btn');
@@ -85,8 +85,8 @@ test.describe('problem-PC conditions', () => {
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: false, error: 'PROXY', message: 'engine could not reach the sheet' }),
     }));
+    await useMock(page, 'http://127.0.0.1:8787');
     await page.goto('/');
-    await page.fill('#in-url', 'http://127.0.0.1:8787');
     await page.fill('#in-email', USERS.admin.email);
     await page.fill('#in-code', USERS.admin.code);
     await page.click('#login-btn');
@@ -98,8 +98,8 @@ test.describe('problem-PC conditions', () => {
     await waitMock(m.url);
     try {
       await hermetic(page);
+      await useMock(page, m.url);
       await page.goto('/');
-      await page.fill('#in-url', m.url);
       await page.fill('#in-email', USERS.admin.email);
       await page.fill('#in-code', USERS.admin.code);
       await page.click('#login-btn');

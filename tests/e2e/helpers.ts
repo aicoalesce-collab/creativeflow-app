@@ -30,14 +30,24 @@ export async function outbox(mockUrl = MOCK): Promise<any[]> {
   return (await fetch(mockUrl + '/__outbox')).json();
 }
 
-/** UI login through the real login screen. Safe to call repeatedly in one test —
- *  it clears the saved session first so the login screen is always available. */
+/** Point the client at the mock BEFORE it boots.
+ *  Releases bake the production URL into the page, so the login screen hides
+ *  the URL field entirely (the team never pastes a link) — tests must therefore
+ *  seed the saved URL rather than type one. */
+export async function useMock(page: Page, mockUrl = MOCK) {
+  await page.addInitScript(url => {
+    try { localStorage.setItem('cf_url', url); } catch {}
+    Object.defineProperty(window, 'CF_DEFAULT_API', { get: () => url, set: () => {}, configurable: true });
+  }, mockUrl);
+}
+
+/** UI login through the real login screen. Safe to call repeatedly in one test. */
 export async function login(page: Page, user: { email: string; code: string }, mockUrl = MOCK) {
   await hermetic(page);
+  await useMock(page, mockUrl);
   await page.goto('/');
-  await page.evaluate(() => { try { localStorage.clear(); } catch {} });
+  await page.evaluate(() => { try { localStorage.removeItem('cf_email'); localStorage.removeItem('cf_code'); } catch {} });
   await page.goto('/');
-  await page.fill('#in-url', mockUrl);
   await page.fill('#in-email', user.email);
   await page.fill('#in-code', user.code);
   await page.click('#login-btn');

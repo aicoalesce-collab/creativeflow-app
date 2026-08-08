@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, resetMock, hermetic, USERS, MOCK } from './helpers';
+import { login, resetMock, hermetic, useMock, USERS, MOCK } from './helpers';
 
 test.describe('auth @smoke', () => {
   test.beforeEach(async () => { await resetMock(); });
@@ -16,8 +16,8 @@ test.describe('auth @smoke', () => {
 
   test('wrong code is rejected with a human message', async ({ page }) => {
     await hermetic(page);
+    await useMock(page);
     await page.goto('/');
-    await page.fill('#in-url', MOCK);
     await page.fill('#in-email', USERS.admin.email);
     await page.fill('#in-code', 'WRONG1');
     await page.click('#login-btn');
@@ -27,8 +27,8 @@ test.describe('auth @smoke', () => {
 
   test('unknown email is rejected', async ({ page }) => {
     await hermetic(page);
+    await useMock(page);
     await page.goto('/');
-    await page.fill('#in-url', MOCK);
     await page.fill('#in-email', 'stranger@example.com');
     await page.fill('#in-code', 'AAA111');
     await page.click('#login-btn');
@@ -42,7 +42,11 @@ test.describe('auth @smoke', () => {
 
   test('cleanUrl strips pasted ?action=ping tails', async ({ page }) => {
     await hermetic(page);
+    await useMock(page);
     await page.goto('/');
+    // the URL field is hidden once a link is known — "Connect to a different
+    // sheet" is the deliberate way back to it
+    await page.click('#change-url');
     await page.fill('#in-url', MOCK + '/?action=ping');
     await page.fill('#in-email', USERS.admin.email);
     await page.fill('#in-code', USERS.admin.code);

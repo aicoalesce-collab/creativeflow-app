@@ -86,10 +86,13 @@ test.describe('desktop exe', () => {
 
   test('the page loads and logs in through the exe origin', async ({ page }) => {
     await page.route(/script\.google(usercontent)?\.com/, r => r.abort());
+    // the exe ships with the production URL baked in, so the login screen hides
+    // the URL field — point it at the mock the way a saved setting would
+    await page.addInitScript(url => {
+      try { localStorage.setItem('cf_url', url); } catch {}
+      Object.defineProperty(window, 'CF_DEFAULT_API', { get: () => url, set: () => {}, configurable: true });
+    }, MOCK);
     await page.goto(EXE_URL + '/');
-    await page.evaluate(() => { try { localStorage.clear(); } catch {} });
-    await page.goto(EXE_URL + '/');
-    await page.fill('#in-url', MOCK);
     await page.fill('#in-email', USERS.admin.email);
     await page.fill('#in-code', USERS.admin.code);
     await page.click('#login-btn');
