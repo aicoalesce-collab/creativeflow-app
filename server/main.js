@@ -51,6 +51,7 @@ function routes_() {
     bootstrap:     { fn: apiBootstrap_ },
     tasks:         { fn: function (u, q) { return { ok: true, tasks: apiTasks_(u), serverTime: new Date().toISOString() }; } },
     tasksPage:     { fn: apiTasksPage_ },
+    taskDetail:    { fn: apiTaskDetail_ },
     listReview:    { fn: apiListReview_ },
     // authed writes (locked)
     createTask:    { lock: true, fn: function (u, q) { const cut = createCutoff_(u, q); if (cut) return cut; return apiCreate_(u, q); } },

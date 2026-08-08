@@ -27,15 +27,41 @@ function apiBootstrap_(user, req) {
   return out;
 }
 
+/* v5 fix for DIAGNOSTICS R4 (one monster row makes a page BIG): list responses
+ * carry only a PREVIEW of desc/notes; the client fetches full text per-task via
+ * the taskDetail action. This hard-caps every paged answer — the ping-sized
+ * invariant survives any 200KB description someone pastes into a cell. */
+const DESC_PREVIEW = 500, NOTES_PREVIEW = 1000, DETAIL_CAP = 50000;
+
+function clip_(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n) : s; }
+
 function taskToApi_(r) {
+  const out = taskToApiFull_(r);
+  const desc = String(r[COL.DESC - 1] || '');
+  const notes = String(r[COL.NOTES - 1] || '');
+  out.desc = clip_(desc, DESC_PREVIEW);
+  out.notes = clip_(notes, NOTES_PREVIEW);
+  if (desc.length > DESC_PREVIEW) out.descMore = true;
+  if (notes.length > NOTES_PREVIEW) out.notesMore = true;
+  return out;
+}
+
+/** Full single-task read (small: ONE task) — { action:'taskDetail', id }. */
+function apiTaskDetail_(user, req) {
+  const rows = scopedRows_(user).filter(r => String(r[COL.ID - 1]).trim() === String(req.id || '').trim());
+  if (!rows.length) return { ok: false, error: 'NOT_FOUND', message: 'Task ' + req.id + ' was not found in your scope.' };
+  return { ok: true, task: taskToApiFull_(rows[0]) };
+}
+
+function taskToApiFull_(r) {
   const t = taskFromRow_(r);
   const tz = tzStr_();
   const due = dueDateTime_(r[COL.DUE_DATE - 1], r[COL.DUE_TIME - 1]);
   return {
     id: t.id, requester: t.requester, team: t.team, assignee: t.assignee,
-    title: t.title, desc: String(r[COL.DESC - 1] || ''), brief: t.brief,
+    title: clip_(t.title, 500), desc: clip_(String(r[COL.DESC - 1] || ''), DETAIL_CAP), brief: t.brief,
     deliverable: t.deliverable, priority: t.priority, status: t.status,
-    notes: t.notes, revisions: Number(r[COL.REVISIONS - 1]) || 0,
+    notes: clip_(t.notes, DETAIL_CAP), revisions: Number(r[COL.REVISIONS - 1]) || 0,
     created: (r[COL.CREATED - 1] instanceof Date) ? r[COL.CREATED - 1].toISOString() : null,
     completed: (r[COL.COMPLETED - 1] instanceof Date) ? r[COL.COMPLETED - 1].toISOString() : null,
     dueMs: due ? due.getTime() : null,

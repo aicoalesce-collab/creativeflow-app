@@ -1,0 +1,10 @@
+[
+  { "name": "Owner Super",   "email": "owner.super@example.com",   "team": "Graphic", "role": "Super Admin", "active": true, "code": "AAA111" },
+  { "name": "Gina Head",     "email": "head.graphic@example.com",  "team": "Graphic", "role": "Team Head",   "active": true, "code": "GGG222" },
+  { "name": "Vikram Head",   "email": "head.video@example.com",    "team": "Video",   "role": "Team Head",   "active": true, "code": "VVV333" },
+  { "name": "Maya Designer", "email": "member.graphic@example.com","team": "Graphic", "role": "Member",      "active": true, "code": "MMM444" },
+  { "name": "Vinod Editor",  "email": "member.video@example.com",  "team": "Video",   "role": "Member",      "active": true, "code": "MMM555" },
+  { "name": "Rohit Mehta",   "email": "assigner@example.com",      "team": "Graphic", "role": "Assigner",    "active": true, "code": "RRT777" },
+  { "name": "Test Bot",      "email": "testbot@example.com",       "team": "Graphic", "role": "Member",      "active": true, "code": "TB6363" },
+  { "name": "Inactive Ivan", "email": "inactive@example.com",      "team": "Video",   "role": "Member",      "active": false, "code": "XXX999" }
+]

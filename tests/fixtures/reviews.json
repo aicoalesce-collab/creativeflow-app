@@ -1,0 +1,8 @@
+[
+  { "id": "RV-00001", "taskId": "VD-0002", "type": "marker", "tc": 12, "x": null, "y": null, "author": "Rohit Mehta", "guest": false, "text": "Lower-third font too small here", "status": "Open", "createdOffsetDays": -2, "version": 2 },
+  { "id": "RV-00002", "taskId": "VD-0002", "type": "marker", "tc": 47, "x": null, "y": null, "author": "Rohit Mehta", "guest": false, "text": "Cut this shot shorter", "status": "Resolved", "createdOffsetDays": -2, "version": 2 },
+  { "id": "RV-00003", "taskId": "VD-0002", "type": "comment", "tc": null, "x": null, "y": null, "author": "Vikram Head", "guest": false, "text": "Color grade looks great", "status": "", "createdOffsetDays": -1, "version": 2 },
+  { "id": "RV-00004", "taskId": "GD-0005", "type": "pin", "tc": null, "x": 62.4, "y": 31.8, "author": "Rohit Mehta", "guest": false, "text": "Logo needs 10% more margin", "status": "Open", "createdOffsetDays": -1, "version": 2 },
+  { "id": "RV-00005", "taskId": "GD-0005", "type": "comment", "tc": null, "x": null, "y": null, "author": "Priya (client)", "guest": true, "text": "Loving the direction!", "status": "", "createdOffsetDays": -1, "version": 2 },
+  { "id": "RV-00006", "taskId": "GD-0004", "type": "pin", "tc": null, "x": 15.0, "y": 80.2, "author": "Gina Head", "guest": false, "text": "Fix the gradient banding", "status": "Open", "createdOffsetDays": 0, "version": 1 }
+]
