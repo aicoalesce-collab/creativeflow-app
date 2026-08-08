@@ -330,7 +330,6 @@ async function fetchPing(){
     const j = await postApi_(state.url, { action:'ping' }, 20000);
     if(j && j.ok){ state.org = j.org || state.org; state.googleClientId = j.googleClientId || ''; state.googleApiKey = j.googleApiKey || ''; state.uploadMode = j.uploadMode || ''; state.storageAccount = j.storageAccount || ''; state.latestVersion = j.appVersion || ''; }
   }catch(e){}
-  setupGoogleButton();
   loginScreenOta_();
 }
 
@@ -388,92 +387,9 @@ async function maybeSelfUpdate(){
     toast(`v${esc(state.latestVersion)} is available — auto-update is off. Use <b>Update now</b> in the sidebar.`);
   }
 }
-function setupGoogleButton(){
-  /* v4.9.2: Google LOGIN is retired — access-code sign-in only (studio decision
-     after the Google flow kept wedging on one PC). Google/Drive still powers
-     uploads inside the app; only the login button is gone. */
-  const wrap = $('#gwrap'), div = $('#gdiv'), note = $('#gfile-note');
-  if(wrap){ wrap.style.display='none'; }
-  if(div){ div.style.display='none'; }
-  if(note){ note.style.display='none'; }
-  return;
-  /* eslint-disable no-unreachable */
-  if(state.me) return; // already signed in — nothing to render
-  if(!state.googleClientId){ wrap.style.display='none'; div.style.display='none'; note.style.display='none'; return; }
-  /* v4.7: in the desktop app, sign in through the user's OWN browser */
-  if(state.browserLogin && isDesktopApp()){
-    $('#gbtn').innerHTML = `<button class="gbtn-browser" onclick="startBrowserLogin(this)">
-      <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:middle;margin-right:10px"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-3.9H24v7.1h12c-.2 1.9-1.5 4.7-4.3 6.6l-.04.3 6.3 4.8.4.04C42.6 41.2 45 33.4 45 24z"/><path fill="#34A853" d="M24 46c5.7 0 10.5-1.9 14-5.1l-6.7-5.2c-1.8 1.2-4.2 2.1-7.3 2.1-5.6 0-10.3-3.7-12-8.9l-.3.02-6.5 5-.1.3C8.6 41 15.7 46 24 46z"/><path fill="#FBBC05" d="M12 28.9c-.4-1.2-.7-2.5-.7-3.9s.3-2.7.7-3.9l-.02-.3-6.6-5.1-.2.1C3.6 18.6 3 21.2 3 24s.6 5.4 1.9 8.1l7.1-3.2z"/><path fill="#EA4335" d="M24 10.7c4 0 6.6 1.7 8.1 3.1l5.9-5.8C34.5 4.5 29.7 2 24 2 15.7 2 8.6 7 5.9 15.9l7.1 5.3c1.7-5.2 6.4-8.9 12-8.9z"/></svg>
-      Continue with Google</button>
-      <div class="gnote">Opens in your browser — sign in there and come right back.</div>`;
-    wrap.style.display='block'; div.style.display='flex'; note.style.display='none';
-    return;
-  }
-  if(!canUseGoogle()){ wrap.style.display='none'; div.style.display='none'; note.style.display='block'; return; }
-  note.style.display='none';
-  const s = document.createElement('script');
-  s.src = 'https://accounts.google.com/gsi/client';
-  s.onload = () => {
-    try{
-      google.accounts.id.initialize({ client_id: state.googleClientId, callback: onGoogleCred });
-      google.accounts.id.renderButton($('#gbtn'), { theme: dark()?'filled_black':'outline', size:'large', width: 360, text:'continue_with' });
-      wrap.style.display='block'; div.style.display='flex';
-    }catch(e){ wrap.style.display='none'; div.style.display='none'; }
-  };
-  s.onerror = () => { wrap.style.display='none'; div.style.display='none'; };
-  document.head.appendChild(s);
-}
-let __blPoll = null;
-async function startBrowserLogin(btn){
-  const err = $('#login-err'); err.style.display='none';
-  if(btn){ btn.disabled = true; btn.dataset.lbl = btn.textContent; btn.textContent = 'Opening your browser…'; }
-  try{
-    const r = await fetch('/oauth/start?u='+encodeURIComponent(state.url||'')); /* v4.9.1: sign in against the sheet the app points at */
-    const j = await r.json();
-    if(!j.ok){ throw new Error('Browser sign-in isn\'t set up yet — ask your admin to add the Desktop OAuth client.'); }
-    setLoginBusy(true, 'WAITING FOR GOOGLE IN YOUR BROWSER…');
-    let tries = 0;
-    if(__blPoll) clearInterval(__blPoll);
-    __blPoll = setInterval(async ()=>{
-      tries++;
-      try{
-        const pr = await fetch('/oauth/result'); const pj = await pr.json();
-        if(pj.status === 'ok'){
-          clearInterval(__blPoll); __blPoll = null;
-          setLoginBusy(true, 'SIGNING YOU IN…');
-          try{
-            store.set('cf_url', state.url); store.set('cf_email', pj.email); store.set('cf_code', pj.code);
-            store.set('td_url', state.url); store.set('td_email', pj.email); store.set('td_code', pj.code);
-          }catch(e){}
-          state.email = pj.email; state.code = pj.code;
-          location.reload();   // the standard boot path takes it from here
-        } else if(pj.status === 'error'){
-          clearInterval(__blPoll); __blPoll = null;
-          setLoginBusy(false);
-          if(btn){ btn.disabled=false; btn.textContent = btn.dataset.lbl || 'Continue with Google'; }
-          showLogin('Google sign-in failed: ' + (pj.message || 'try again'));
-        }
-      }catch(e){ /* keep polling */ }
-      if(tries > 300){ clearInterval(__blPoll); __blPoll=null; setLoginBusy(false); if(btn){btn.disabled=false; btn.textContent=btn.dataset.lbl||'Continue with Google';} showLogin('Timed out waiting for the browser sign-in. Try again.'); }
-    }, 1000);
-  }catch(e){
-    setLoginBusy(false);
-    if(btn){ btn.disabled=false; btn.textContent = btn.dataset.lbl || 'Continue with Google'; }
-    showLogin(e.message);
-  }
-}
-async function onGoogleCred(resp){
-  const err = $('#login-err'); err.style.display='none';
-  try{
-    setLoginBusy(true, 'SIGNING IN WITH GOOGLE…');
-    const j = await postApi_(state.url, { action:'googleLogin', credential: resp.credential });
-    if(!j || !j.ok) throw new Error((j && (j.message || j.error)) || 'Google sign-in failed');
-    state.email = j.email; state.code = j.code;
-    await bootstrapAndEnter(true);
-  }catch(e){
-    showLogin('Google sign-in failed: '+e.message);
-  }finally{ setLoginBusy(false); }
-}
+/* v5: setupGoogleButton removed — Google login is retired (owner order, 4.9.2). Do not re-add. */
+/* v5: startBrowserLogin removed — Google login is retired (owner order, 4.9.2). Do not re-add. */
+/* v5: onGoogleCred removed — Google login is retired (owner order, 4.9.2). Do not re-add. */
 
 /* ═══════════ LOGIN ═══════════ */
 function setLoginBusy(b, label){
@@ -2269,10 +2185,11 @@ function renderContent(){
 }
 function renderAll(){
   if(!state.me) return;
-  /* v5: keep the current tab in the URL hash so PWA back-button + refresh land
-     where you were. replaceState = no history spam from re-renders. */
-  try { if(location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab); } catch(e){}
   renderNav(); renderTop(); renderNotifPanel(); renderContent();
+  /* v5: keep the current tab in the URL hash so PWA back-button + refresh land
+     where you were. Written AFTER renderContent because that's where the
+     assigner overview→review redirect happens. replaceState = no history spam. */
+  try { if(location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab); } catch(e){}
 }
 window.addEventListener('hashchange', () => {
   const want = location.hash.slice(1);
@@ -2330,5 +2247,22 @@ if(__rvTok){
    global <script> scope — expose every top-level function on window so the
    proven markup keeps working unchanged under Vite/ESM. state/store/rv are
    exposed too (Playwright suites and the console read them). ── */
-Object.assign(window, { state, store, rv });
-Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setupGoogleButton, startBrowserLogin, onGoogleCred, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, driveWhoAmI_, ensureStudioAccount_, loadGsi, driveToken, gFetch, ensureFolder_, driveFolder, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });
+/* Mutable module bindings the markup writes to (tab=…, weekOffset--, filters.q=…)
+   MUST be live accessors, not value copies: a plain Object.assign snapshots the
+   reference, so any later reassignment (e.g. the filter reset on login) leaves
+   the inline handlers writing to an orphan — dropdowns and week arrows then
+   silently do nothing. Getters/setters keep window and module in lockstep. */
+[['tab', v => (tab = v), () => tab],
+ ['weekOffset', v => (weekOffset = v), () => weekOffset],
+ ['myTab', v => (myTab = v), () => myTab],
+ ['mcalOffset', v => (mcalOffset = v), () => mcalOffset],
+ ['filters', v => (filters = v), () => filters],
+ ['reportSubject', v => (reportSubject = v), () => reportSubject],
+ ['reportPeriod', v => (reportPeriod = v), () => reportPeriod],
+ ['rv', v => (rv = v), () => rv],
+ ['bulkRows', v => (bulkRows = v), () => bulkRows],
+].forEach(([name, set, get]) => {
+  Object.defineProperty(window, name, { get, set, configurable: true });
+});
+Object.assign(window, { state, store, STATUSES, PRIORITIES });
+Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, driveWhoAmI_, ensureStudioAccount_, loadGsi, driveToken, gFetch, ensureFolder_, driveFolder, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });

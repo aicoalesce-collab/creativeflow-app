@@ -472,13 +472,13 @@ svg text{font-family:var(--font-b)}
         Your admin deploys it once from the master sheet (Extensions ▸ Apps Script ▸ Deploy ▸ Web app) and shares the URL ending in <b>/exec</b>. Full steps are in the guide.
       </details>
     </div>
-    <div class="gwrap" id="gwrap"><div id="gbtn"></div><div class="gnote">Uses your Google account — no code needed.</div></div>
-    <div class="ldivider" id="gdiv" style="display:none">or use your access code</div>
+    <!-- v5: Google sign-in markup REMOVED (owner's order in 4.9.2 — code-only
+         login; the old build merely hid it). Do not re-add. Google/Drive still
+         powers uploads; only the login path is gone. -->
     <div class="lfield"><label>Your email</label><input id="in-email" type="email" placeholder="you@gmail.com" autocomplete="email"></div>
     <div class="lfield"><label>Access code</label><input id="in-code" placeholder="6-character code from your email" maxlength="12" style="letter-spacing:3px;text-transform:uppercase"></div>
     <button class="login-btn" id="login-btn">OPEN MY DASHBOARD</button>
     <div class="remember"><input type="checkbox" id="in-remember" checked><label for="in-remember" style="all:unset;cursor:pointer">Remember me on this computer</label></div>
-    <div class="login-note" id="gfile-note" style="display:none">💡 "Sign in with Google" appears when CreativeFlow runs through the desktop app (CreativeFlow.exe) and Google login is configured.</div>
     <div class="login-note">No code yet? Ask your admin to run <b>generateAccessCodes</b> — everyone gets emailed a personal code.</div>
     <div class="saved-url" id="saved-url" style="display:none"></div>
     <div class="changelink" id="changelink" style="display:none"><a href="#" id="test-conn">Test connection</a> · <a href="#" id="change-url">Connect to a different sheet</a></div>
