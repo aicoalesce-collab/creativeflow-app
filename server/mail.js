@@ -18,7 +18,9 @@ let CURRENT_ACTOR = ''; // set by dispatch for authed calls; '' for triggers/pub
 
 function safeSend_(to, subject, html, cc) {
   if (!to) return;
-  MAIL_QUEUE.push({ to: String(to), subject: String(subject), html: String(html), cc: String(cc || '') });
+  // actor is stamped PER MESSAGE — extsync impersonates different assigners in
+  // one execution, and CURRENT_ACTOR may already be restored by flush time.
+  MAIL_QUEUE.push({ to: String(to), subject: String(subject), html: String(html), cc: String(cc || ''), actor: CURRENT_ACTOR });
 }
 
 function flushMailQueue_() {
@@ -26,13 +28,12 @@ function flushMailQueue_() {
   const q = MAIL_QUEUE;
   MAIL_QUEUE = [];
   const muted = String(cfg_('EMAIL_MUTE', 'NO')).toUpperCase().indexOf('Y') === 0;
-  const actorMuted = /@example\.com$/i.test(CURRENT_ACTOR);
   q.forEach(function (m) {
     const clean = m.to.split(',').map(s => s.trim())
       .filter(s => s && s.indexOf('@') > 0 && s.indexOf('@example.com') === -1).join(',');
     if (!clean) return;
     if (muted) { log_('muted', '', clean, m.subject, true); return; }
-    if (actorMuted) { log_('muted-actor', '', clean, m.subject + ' (actor ' + CURRENT_ACTOR + ')', true); return; }
+    if (/@example\.com$/i.test(m.actor || '')) { log_('muted-actor', '', clean, m.subject + ' (actor ' + m.actor + ')', true); return; }
     try {
       if (MailApp.getRemainingDailyQuota() < 1) { log_('quota', '', clean, 'Daily email quota exhausted', false); return; }
       const opts = { to: clean, subject: m.subject, htmlBody: m.html, name: cfg_('ORG_NAME', 'Task System') + ' · Tasks' };

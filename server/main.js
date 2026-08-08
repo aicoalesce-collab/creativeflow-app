@@ -93,21 +93,20 @@ function routeApi_(req) {
 }
 
 function dispatch_(route, user, req) {
+  // flush lives in finally: a handler exception must never discard queued mail
+  // whose sheet writes already committed (flushMailQueue_ never throws).
   if (!route.lock) {
-    const out = route.fn(user, req);
-    flushMailQueue_();
-    return out;
+    try { return route.fn(user, req); }
+    finally { flushMailQueue_(); }
   }
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  let out;
   try {
-    out = route.fn(user, req);
+    return route.fn(user, req);
   } finally {
     lock.releaseLock();
+    flushMailQueue_(); // emails go out AFTER the lock is released
   }
-  flushMailQueue_(); // emails go out AFTER the lock is released
-  return out;
 }
 
 /* ── ping ──────────────────────────────────────────────────────────────── */

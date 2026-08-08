@@ -42,7 +42,8 @@ function selfCheck() {
       const res = UrlFetchApp.fetch(prodUrl + '?action=ping', { muteHttpExceptions: true, followRedirects: true });
       fetchOk = res.getResponseCode() === 200 && res.getContentText().indexOf('"ok":true') !== -1;
     } catch (e) { fetchOk = false; }
-    const lastPing = Number(CacheService.getScriptCache().get('LAST_CLIENT_PING') || cfg_('LAST_CLIENT_PING_AT', 0)) || 0;
+    const lastPing = Number(CacheService.getScriptCache().get('LAST_CLIENT_PING')
+      || PropertiesService.getScriptProperties().getProperty('LAST_CLIENT_PING_AT') || 0) || 0;
     const clientRecent = (Date.now() - lastPing) < 24 * 3600 * 1000;
     const owner = ownerEmail_();
     if (!fetchOk && !clientRecent) {
@@ -59,7 +60,12 @@ function selfCheck() {
   flushMailQueue_();
 }
 
-/** Called from apiPing_ traffic — cheap passive heartbeat. */
+/** Called from apiPing_ traffic — cheap passive heartbeat.
+ *  Cache maxes out at 6h TTL, so also persist durably (Script Properties)
+ *  or the daily selfCheck could never see a ping older than ~6 hours. */
 function stampClientPing_() {
-  try { CacheService.getScriptCache().put('LAST_CLIENT_PING', String(Date.now()), 21600); } catch (e) {}
+  try {
+    CacheService.getScriptCache().put('LAST_CLIENT_PING', String(Date.now()), 21600);
+    PropertiesService.getScriptProperties().setProperty('LAST_CLIENT_PING_AT', String(Date.now()));
+  } catch (e) {}
 }

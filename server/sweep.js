@@ -6,8 +6,9 @@
  */
 
 function sweep() {
-  sweepBody_();
-  flushMailQueue_();
+  try { sweepBody_(); }
+  catch (e) { log_('sweep-error', '', '', String(e), false); }
+  flushMailQueue_(); // always — stamped reminders must not lose their emails
 }
 
 function sweepBody_() {

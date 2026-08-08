@@ -281,8 +281,9 @@ function wipeImport_(req) {
     if (sh && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, sh.getMaxColumns()).clearContent();
   });
   const r = ss.getSheetByName(SHEETS.ROSTER);
-  if (r && r.getLastRow() > 1) r.getRange(2, 1, r.getLastRow() - 1, 7).clearContent();
-  buildRoster_(ss); // reseed owner + Test Bot
+  // clear INCLUDING the header row: buildRoster_ only seeds when A1 !== 'Name'
+  if (r) r.getRange(1, 1, Math.max(r.getLastRow(), 1), 7).clearContent();
+  buildRoster_(ss); // reseed header + owner + Test Bot
   cfgSet_('MIGRATED_AT', '');
   cfgSet_('MIGRATE_CURSOR', '');
   log_('migrate', 'wipe', 'admin', 'imported data cleared', true);

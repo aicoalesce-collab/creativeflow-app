@@ -76,7 +76,9 @@ function adminSetConfig_(req) {
     'SLOT_EVE', 'SLOT_NOON', 'CREATE_CUTOFF', 'WEEKLY_OFF', 'EXTRA_WORK_DATES', 'HOLIDAY_DATES', 'UPLOAD_MODE', 'DRIVE_EXPIRY_DAYS'];
   if (ALLOWED.indexOf(key) === -1) return { ok: false, error: 'VALIDATION', message: 'Config key not settable remotely: ' + key };
   cfgSet_(key, val);
-  return { ok: true, key: key, value: String(val) };
+  // the daily trigger bakes the hour at install time — changing it must reinstall
+  if (key === 'DIGEST_HOUR') installTriggers_();
+  return { ok: true, key: key, value: String(val), note: key === 'DIGEST_HOUR' ? 'triggers reinstalled at the new hour' : undefined };
 }
 
 /** Atomically renames a person across every name-keyed column, then rebuilds
@@ -107,6 +109,7 @@ function adminRenameMember_(user, req) {
   swapCol_(SHEETS.SHARES, 4);
   swapCol_(SHEETS.CYCLES, 4);
   swapCol_(SHEETS.VERSIONS, 4);
+  swapCol_(SYNC_SHEET, 1); // external-sheet registry keys on the assigner name too
 
   rebuildMemberTabs();
   syncFormAssignees();

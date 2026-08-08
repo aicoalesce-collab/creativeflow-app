@@ -165,7 +165,13 @@ function protectAppColumns_(book, tabName) {
 /* ── the sync engine (10-min trigger + admin syncNow) ──────────────────── */
 
 function extSync() {
-  try { extSyncBody_(false); } catch (e) { log_('extsync', '', '', String(e), false); }
+  // The sync writes to Master via apiCreate_/apiUpdate_ — it must hold the same
+  // ScriptLock that serializes every other write (handleFormSubmit pattern).
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) { log_('extsync', '', '', 'lock busy — skipped this run', true); return; }
+  try { extSyncBody_(false); }
+  catch (e) { log_('extsync', '', '', String(e), false); }
+  finally { lock.releaseLock(); }
   flushMailQueue_();
 }
 
@@ -201,7 +207,7 @@ function syncOne_(entry, regSh, force) {
     const rows = lastRow < 2 ? [] : intake.getRange(2, 1, lastRow - 1, INTAKE_HEADERS.length).getValues();
 
     // fast path: nothing changed inbound AND no outbound deltas pending
-    const hash = intakeHash_(rows) + '|' + masterStateHash_(user.name);
+    const hash = intakeHash_(rows) + '|' + masterStateHash_(user);
     if (!force && hash === entry.hash) {
       regSh.getRange(entry.row, 5).setValue(new Date());
       return 'unchanged';
@@ -290,7 +296,7 @@ function syncOne_(entry, regSh, force) {
 
     writeShadow_(book, shadow);
     const rows2 = intake.getLastRow() < 2 ? [] : intake.getRange(2, 1, intake.getLastRow() - 1, INTAKE_HEADERS.length).getValues();
-    regSh.getRange(entry.row, 5, 1, 2).setValues([[new Date(), intakeHash_(rows2) + '|' + masterStateHash_(user.name)]]);
+    regSh.getRange(entry.row, 5, 1, 2).setValues([[new Date(), intakeHash_(rows2) + '|' + masterStateHash_(user)]]);
     const summary = created + ' created, ' + updatedIn + ' edits in, ' + updatedOut + ' out, ' + errors + ' errors';
     if (created || updatedIn || errors) log_('extsync', '', entry.assigner, summary, errors === 0);
     return summary;
@@ -308,9 +314,10 @@ function intakeHash_(rows) {
   return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8));
 }
 
-/** Cheap outbound-delta detector: hash of this assigner's task ids+status+deliverable. */
-function masterStateHash_(assignerName) {
-  const user = { name: assignerName, role: 'Assigner' };
+/** Cheap outbound-delta detector: hash of this person's task ids+status+deliverable.
+ *  Takes the full user object so the row set matches what syncOne_ actually
+ *  syncs (a Team Head's scope is their team, not "rows they requested"). */
+function masterStateHash_(user) {
   let s = '';
   scopedRows_(user).forEach(r => {
     s += String(r[COL.ID - 1]) + '' + String(r[COL.STATUS - 1]) + '' + String(r[COL.DELIVERABLE - 1]) + '';

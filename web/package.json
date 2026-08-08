@@ -1,0 +1,16 @@
+{
+  "name": "creativeflow-v5-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "cross-env-shell SINGLEFILE=1 \"vite build --outDir dist-single\"",
+    "preview": "vite preview --port 4173"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.0.3",
+    "cross-env": "^7.0.3"
+  }
+}

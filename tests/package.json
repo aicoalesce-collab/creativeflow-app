@@ -1,0 +1,15 @@
+{
+  "name": "creativeflow-v5-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mock": "node mock/mock-api.mjs",
+    "test": "playwright test",
+    "test:quick": "playwright test --grep @smoke",
+    "test:pc": "playwright test e2e/70-problem-pc.spec.ts",
+    "test:exe": "playwright test e2e/90-exe.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
