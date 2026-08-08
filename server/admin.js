@@ -49,6 +49,7 @@ function apiAdmin_(user, req) {
     case 'digestNow':       dailyDigestNow(); return { ok: true, result: 'digest pass done' };
     case 'backupNow':       return { ok: true, result: weeklyBackupBody_() };
     case 'report':          return adminReport_();
+    case 'mailAudit':       return adminMailAudit_(req);
     case 'setConfig':       return adminSetConfig_(req);
     // migration (migrate.js)
     case 'migratePreflight': return migratePreflight_(req);
@@ -214,4 +215,52 @@ function adminRenameMember_(user, req) {
   syncFormAssignees();
   log_('rename', '', user.email, from + ' -> ' + to + ' (' + changed + ' cells)', true);
   return { ok: true, renamed: changed + ' cells', from: from, to: to };
+}
+
+/**
+ * { op:'mailAudit', days:1 } — what the mail system has actually been doing.
+ *
+ * Written the day EMAIL_MUTE was lifted and the account turned out to have one
+ * send left in its daily quota. Without this the only way to answer "what ate
+ * the quota" is to open the sheet and read 3,500 log rows by eye.
+ *
+ * Reads the Alerts Log backwards (newest first) and counts by action, so
+ * 'sent' vs 'muted' vs 'quota' vs 'held-balanced' is immediately visible.
+ */
+function adminMailAudit_(req) {
+  const days = Math.min(30, Math.max(1, Math.floor(Number(req && req.days) || 1)));
+  const since = Date.now() - days * 86400000;
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.LOG);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, days: days, total: 0, byAction: {}, recent: [] };
+
+  /* Only the tail matters and the log is capped at 5,000 rows, but reading all
+     of it is still ~5,000 rows of getValues — take the last 1,500. */
+  const last = sh.getLastRow();
+  const first = Math.max(2, last - 1500 + 1);
+  const rows = sh.getRange(first, 1, last - first + 1, 6).getValues();
+
+  const byAction = {};
+  const recent = [];
+  let total = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const r = rows[i];
+    const when = r[0] instanceof Date ? r[0].getTime() : 0;
+    if (!when || when < since) continue;
+    const action = String(r[1] || '');
+    byAction[action] = (byAction[action] || 0) + 1;
+    total++;
+    if (recent.length < 25) {
+      recent.push({
+        at: new Date(when).toISOString(), action: action,
+        task: String(r[2] || ''), who: String(r[3] || '').slice(0, 60),
+        note: String(r[4] || '').slice(0, 70), ok: r[5],
+      });
+    }
+  }
+  return {
+    ok: true, days: days, total: total, byAction: byAction,
+    quotaLeft: MailApp.getRemainingDailyQuota(),
+    runsAs: Session.getEffectiveUser().getEmail(),
+    recent: recent,
+  };
 }
