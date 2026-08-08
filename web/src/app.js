@@ -1552,21 +1552,34 @@ function ytFallback(vid){
 function renderTools(){
   const box = document.getElementById('rv-tools'); if(!box) return;
   const t = rvTask(); if(!t){ box.innerHTML=''; return; }
-  if(rv.guest){
-    box.innerHTML = `<div class="hint">${rv.mode==='comment' ? 'You\'re reviewing as a guest — click the ⏱ / 📍 chips to jump to each point, and reply below.' : 'View-only guest link — click the ⏱ / 📍 chips to see each point in place.'}</div>`;
-    return;
-  }
-  const manage = rvCanAnnotate();   /* guests on a comment link may annotate too */
+  /* Guests on a COMMENT link annotate exactly like the studio does — pins on an
+     image, timecode markers on a video. Only view-only links stop at reading.
+     (This used to return early for every guest, so a comment guest could click
+      the image but the note box never appeared: annotation was dead.) */
+  const manage = rvCanAnnotate();
+  const guestNote = rv.guest
+    ? `<div class="hint" style="margin-bottom:8px">You're reviewing as a guest — mark your points straight on the file, or reply at the bottom.</div>` : '';
   if(rv.form){
+    /* The name is asked for HERE as well as under the comments: a guest who
+       pins before scrolling down would otherwise write the whole note, press
+       save, and be told off about a field they cannot see. */
+    const needName = rv.guest && !rv.guestName;
     box.innerHTML = `<div class="rv-form">
       <div class="rv-form-h">${rv.form.type==='marker' ? '⏱ CHANGE AT '+tcStr(rv.form.tc) : '📍 PIN AT THE MARKED SPOT'}</div>
+      ${needName ? `<input id="rv-form-name" class="guest-name" placeholder="Your name" maxlength="40" style="margin-bottom:6px">` : ''}
       <textarea id="rv-form-text" rows="2" placeholder="What needs to change here?"></textarea>
       <div class="rv-form-a"><button class="btn btn-g" onclick="cancelForm()">Cancel</button><button class="btn btn-p" id="rv-form-save" onclick="saveForm(this)">Add change</button></div></div>`;
+    const first = document.getElementById(needName ? 'rv-form-name' : 'rv-form-text');
+    if(first) first.focus();
     const ta = document.getElementById('rv-form-text');
-    if(ta){ ta.focus(); ta.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey) && e.key==='Enter') saveForm(document.getElementById('rv-form-save')); }); }
+    if(ta) ta.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey) && e.key==='Enter') saveForm(document.getElementById('rv-form-save')); });
     return;
   }
-  if(rv.media.kind==='none' && (manage || rvMine(t))){
+  if(rv.media.kind==='none' && rv.guest){
+    box.innerHTML = `<div class="hint">There's no file on this task yet — the team will attach it here.</div>`;
+    return;
+  }
+  if(rv.media.kind==='none' && (manage || rvMine(t))){   /* attaching is studio-only */
     if(canDriveUpload()){
       box.innerHTML = `<button class="btn btn-p" style="width:100%" onclick="pickUpload('${t.id}')">⬆ Upload to ${uplCentral()? "studio" : "my"} Drive</button>
         <div class="hint" style="margin:7px 0;text-align:center">${uplCentral()? 'goes to the studio Drive ('+esc(state.storageAccount)+') & links itself' : 'goes to your own Google Drive & links itself'} — or paste a link:</div>
@@ -1582,18 +1595,18 @@ function renderTools(){
     return;
   }
   const k = rv.media.kind;
-  if(k==='img'){ box.innerHTML = `<div class="hint">🖱 <b>Click anywhere on the image</b> to pin a change exactly where it belongs.</div>`; return; }
+  if(k==='img'){ box.innerHTML = guestNote + `<div class="hint">🖱 <b>Click anywhere on the image</b> to pin a change exactly where it belongs.</div>`; return; }
   if((k==='yt' && rv.player && !rv.ytFailed) || k==='dvv'){
-    box.innerHTML = `<button class="btn btn-p" style="width:100%" onclick="addMarkerAtCurrent()">⏱ Add change at current time</button>
+    box.innerHTML = guestNote + `<button class="btn btn-p" style="width:100%" onclick="addMarkerAtCurrent()">⏱ Add change at current time</button>
       ${k==='dvv'? `<div class="hint" style="margin-top:7px">Pause where the change is needed, then press the button — the timestamp is picked up automatically.</div>`:''}`;
     return;
   }
   if(k==='yt' || k==='dv' || k==='link'){
-    box.innerHTML = `<div class="rv-tc-row"><input id="rv-tc" placeholder="m:ss" inputmode="numeric"><button class="btn btn-p" style="flex:1" onclick="addMarkerAtCurrent()">⏱ Add change at this time</button></div>
+    box.innerHTML = guestNote + `<div class="rv-tc-row"><input id="rv-tc" placeholder="m:ss" inputmode="numeric"><button class="btn btn-p" style="flex:1" onclick="addMarkerAtCurrent()">⏱ Add change at this time</button></div>
       <div class="hint" style="margin-top:7px">${k==='dv' ? 'Type the time shown in the Drive player (e.g. 1:23).' : k==='yt' ? 'Player still loading — you can type the time meanwhile.' : 'Type the time from your player (e.g. 1:23).'}</div>`;
     return;
   }
-  box.innerHTML = `<div class="hint">Attach a deliverable link to start marking changes.</div>`;
+  box.innerHTML = guestNote + `<div class="hint">Attach a deliverable link to start marking changes.</div>`;
 }
 
 function renderSide(){
@@ -1602,10 +1615,11 @@ function renderSide(){
   const marks = rv.items.filter(x=>x.type!=='comment' && onV(x));
   const pins  = rv.items.filter(x=>x.type==='pin' && onV(x));
   const cms   = rv.items.filter(x=>x.type==='comment');
-  const manage = rvManage();
+  const manage = rvManage();          /* resolve / delete — studio only */
+  const canAdd = rvCanAnnotate();     /* …but comment guests can still ADD */
   const openN = marks.filter(x=>x.status==='Open').length;
   let h = `<div class="rv-h">CHANGES <span>${marks.length ? openN+' open · '+(marks.length-openN)+' resolved' : 'none yet'}</span></div>`;
-  if(!marks.length) h += `<div class="rv-empty">${manage ? (rv.media.kind==='img' ? 'Click anywhere on the image to pin the first change.' : 'Use the tool above to mark the first change.') : 'No change markers yet.'}</div>`;
+  if(!marks.length) h += `<div class="rv-empty">${canAdd ? (rv.media.kind==='img' ? 'Click anywhere on the image to pin the first change.' : 'Use the tool above to mark the first change.') : 'No change markers yet.'}</div>`;
   h += marks.map(i=>{
     const res = i.status==='Resolved';
     const chip = i.type==='marker' ? '⏱ '+tcStr(i.tc||0) : '📍 '+(pins.indexOf(i)+1);
@@ -1698,9 +1712,15 @@ async function saveForm(btn){
       : { type:'pin', x: f.x, y: f.y, text, version: rv.viewVersion };
     let j;
     if(rv.guest){
-      const nameEl = document.getElementById('rv-guest-name');
-      const name = (nameEl ? nameEl.value.trim() : '') || rv.guestName;
-      if(!name || name.length < 2){ toast('Enter your name first (below the comments).', true); if(btn){btn.disabled=false; btn.textContent='Add change';} return; }
+      const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+      const name = val('rv-form-name') || val('rv-guest-name') || rv.guestName;   /* the field inside the form wins */
+      if(!name || name.length < 2){
+        toast('Add your name first so the team knows who marked this.', true);
+        const n = document.getElementById('rv-form-name') || document.getElementById('rv-guest-name');
+        if(n) n.focus();
+        if(btn){ btn.disabled=false; btn.textContent='Add change'; }
+        return;
+      }
       rv.guestName = name; store.set('cf_guest_name', name);
       j = await api('guestComment', Object.assign({ token: rv.guestTok, name }, base));
     } else {

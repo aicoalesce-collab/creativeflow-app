@@ -17,8 +17,10 @@ Need $dep.staging.id 'staging.id'; Need $dep.staging.url 'staging.url'
 Need $dep.prod.id    'prod.id';    Need $dep.prod.url    'prod.url'
 
 Write-Host "== preflight =="
-clasp login --status | Out-Null
-if ($LASTEXITCODE) { throw "clasp is not logged in — run: clasp login" }
+# clasp 3 renamed this; `login --status` is the 2.x spelling and errors out
+$who = clasp show-authorized-user 2>&1 | Out-String
+if ($LASTEXITCODE -or $who -notmatch '@') { throw "clasp is not logged in — run: clasp login" }
+Write-Host ("authenticated as " + $who.Trim())
 & "$root\tools\drift-check.ps1"
 if ($LASTEXITCODE) { throw "the live script differs from git — reconcile before deploying" }
 
@@ -31,7 +33,7 @@ if (-not $SkipTests) {
 
 Write-Host "== build + push =="
 & "$root\scripts\build-app.ps1"
-Push-Location "$root\server"
+Push-Location $root      # .clasp.json is at the repo root (rootDir: server)
 try {
   clasp push -f
   if ($LASTEXITCODE) { throw "clasp push failed" }

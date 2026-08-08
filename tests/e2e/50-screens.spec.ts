@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, resetMock, USERS } from './helpers';
+import { login, resetMock, USERS, localDatePlus } from './helpers';
 
 /** Every screen renders real data for the right role. */
 test.describe('screens', () => {
@@ -122,7 +122,7 @@ test.describe('screens', () => {
     await login(page, USERS.headG);
     await page.evaluate(() => (window as any).openNewTaskModal());
     const v = await page.locator('#n-due').inputValue();
-    const want = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    const want = localDatePlus(2);   // local, not UTC — see helpers
     expect(v).toBe(want);
   });
 

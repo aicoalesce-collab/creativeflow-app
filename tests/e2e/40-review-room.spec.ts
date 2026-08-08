@@ -146,6 +146,104 @@ test.describe('review room + guests', () => {
     expect(guest.guest).toBe(true);
   });
 
+  /* Guest ANNOTATION, driven through the real UI.
+     The API accepted guest pins/markers from day one and the API-level test
+     above passed — but the client returned a read-only hint for every guest
+     before the annotation tools were ever reached, so in the actual product a
+     guest could only type a reply. Nothing caught it because no test opened a
+     guest link and tried to mark anything. These do. */
+
+  /** The comment-link fixture is a Drive image; serve a real one so the click
+   *  target has a real box, and keep the test off the network. */
+  const stubImage = (page) => page.route(/drive\.google\.com\/thumbnail/, r => r.fulfill({
+    contentType: 'image/svg+xml',
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="#333"/></svg>',
+  }));
+
+  const openAsGuest = async (page, token: string) => {
+    await hermetic(page);
+    await page.route(/youtube\.com|youtu\.be/, r => r.abort());   // no player → manual timecode path
+    await stubImage(page);
+    await page.goto('/');
+    await page.evaluate(() => { try { localStorage.clear(); } catch {} });
+    await page.goto('/?review=' + token + '&api=' + encodeURIComponent(MOCK));
+    await expect(page.locator('#review')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#rv-tools')).toBeVisible();
+  };
+
+  test('guest on a comment link can PIN a change on the image @smoke', async ({ page }) => {
+    await openAsGuest(page, 'AbCdEfGhJkMnPqRsTuVwXyZ234');   // GD-0005, mode: comment
+
+    // the annotation affordance must actually be offered — this is what was missing
+    await expect(page.locator('#rv-tools')).toContainText(/click anywhere on the image/i);
+    expect(await page.evaluate(() => (window as any).rvCanAnnotate())).toBe(true);
+
+    const pinsBefore = await page.locator('#pin-layer .pin').count();   // GD-0005 already has one
+    await page.locator('#img-wrap').click({ position: { x: 240, y: 180 } });
+    await expect(page.locator('#pin-layer .pin.hot')).toHaveCount(1);   // ghost pin marks the spot
+
+    // the note box must appear — and ask for the name in place, not 'below the comments'
+    await expect(page.locator('#rv-form-text')).toBeVisible();
+    await expect(page.locator('#rv-form-name')).toBeVisible();
+    await page.fill('#rv-form-name', 'Ananya Client');
+    await page.fill('#rv-form-text', 'logo sits too low here');
+    await page.click('#rv-form-save');
+
+    const mine = page.locator('#rv-scroll .mk').last();
+    await expect(mine).toContainText('logo sits too low here');
+    await expect(mine).toContainText('Ananya Client');
+    await expect(mine).toContainText('guest');                          // attributed, not anonymous
+    await expect(page.locator('#pin-layer .pin')).toHaveCount(pinsBefore + 1);
+    await expect(page.locator('#rv-form-text')).toHaveCount(0);         // form closes after saving
+
+    // and it really persisted, as a pin, with coordinates
+    const g = await call(page, { action: 'guestReview', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234' });
+    const pin = g.items.find((i: any) => i.type === 'pin' && i.author === 'Ananya Client');
+    expect(pin).toBeTruthy();
+    expect(pin.guest).toBe(true);
+    expect(pin.status).toBe('Open');
+    expect(pin.x).toBeGreaterThan(0);
+    expect(pin.y).toBeGreaterThan(0);
+  });
+
+  test('guest on a comment link can mark a video timecode', async ({ page }) => {
+    await login(page, USERS.headV);
+    const s = await call(page, { action: 'createShare', taskId: 'VD-0002', mode: 'comment', email: USERS.headV.email, code: USERS.headV.code });
+    expect(s.ok).toBe(true);
+
+    await openAsGuest(page, s.token);
+    await page.fill('#rv-tc', '1:23');
+    await page.click('#rv-tools .btn-p');
+
+    await expect(page.locator('.rv-form-h')).toContainText('1:23');
+    await page.fill('#rv-form-name', 'Ananya Client');
+    await page.fill('#rv-form-text', 'cut the dead air here');
+    await page.click('#rv-form-save');
+
+    await expect(page.locator('#rv-scroll')).toContainText('cut the dead air here');
+    const g = await call(page, { action: 'guestReview', token: s.token });
+    const mk = g.items.find((i: any) => i.type === 'marker' && i.author === 'Ananya Client');
+    expect(mk.tc).toBe(83);
+    expect(mk.guest).toBe(true);
+  });
+
+  test('guests still cannot resolve, delete or send changes', async ({ page }) => {
+    await openAsGuest(page, 'AbCdEfGhJkMnPqRsTuVwXyZ234');
+    await expect(page.locator('#rv-send')).toHaveCount(0);        // send-changes button
+    await expect(page.locator('#rv-share-btn')).toHaveCount(0);   // share button
+    await expect(page.locator('#rv-scroll .mk-a .mk-btn')).toHaveCount(0);  // resolve/delete
+    expect(await page.evaluate(() => (window as any).rvCanAnnotate())).toBe(true);
+  });
+
+  test('a view-only guest link offers no annotation at all', async ({ page }) => {
+    await openAsGuest(page, 'ViewOnlyTokenAbCdEfGhJkMn2');        // VD-0002, mode: view
+    await expect(page.locator('#rv-tools')).toContainText(/view-only/i);
+    await expect(page.locator('#rv-tools .btn')).toHaveCount(0);
+    await expect(page.locator('#rv-tc')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).rvCanAnnotate())).toBe(false);
+    await expect(page.locator('#rv-compose')).toContainText(/view-only/i);
+  });
+
   test('share URL uses the short review route on its own origin', async ({ page }) => {
     await login(page, USERS.headG);
     const u = await page.evaluate(() => (window as any).shareUrl('TOKENTOKENTOKENTOKENTOKEN1'));

@@ -25,6 +25,11 @@ if ($LASTEXITCODE) { exit 1 }
 & $probe login $Url $TestEmail $TestCode
 if ($LASTEXITCODE) { exit 1 }
 
-& $probe admin $Url $TestEmail $TestCode '{"op":"report"}' 2>&1 | Out-Null  # expected FORBIDDEN: Test Bot is a Member
+# Expected to FAIL: Test Bot is a Member, so admin ops must be refused. If this
+# ever succeeds, a non-admin just got admin rights — that is the alarm.
+try { & $probe admin $Url $TestEmail $TestCode '{"op":"report"}' 2>&1 | Out-Null } catch {}
+if ($LASTEXITCODE -eq 0) { Write-Host "FAIL  a Member was allowed to run admin ops"; exit 1 }
 Write-Host "ok    admin ops correctly refused to a non-admin"
+
 Write-Host "smoke PASSED for $Url"
+exit 0   # without this the script inherits the deliberately-failing probe above

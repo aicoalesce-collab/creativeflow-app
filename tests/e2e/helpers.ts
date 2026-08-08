@@ -72,3 +72,13 @@ export async function waitMock(url: string) {
   }
   throw new Error('mock did not come up: ' + url);
 }
+
+/** yyyy-mm-dd for today+days in LOCAL time.
+ *  The app computes its date defaults locally, so an expectation built with
+ *  toISOString() (which is UTC) disagrees for the 5.5 hours after midnight in
+ *  Asia/Calcutta — a test that passes all day and fails overnight. */
+export function localDatePlus(days: number): string {
+  const d = new Date(Date.now() + days * 86400000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
