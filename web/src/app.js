@@ -320,7 +320,7 @@ async function loadTasksFirstFast_(){
         setSync('busy', 'LOADING '+state.tasks.length+'/'+total+'…');
         renderAll();
       }
-      state.lastSync = new Date(); setSync(''); renderAll();
+      state.lastSync = new Date(); setSync(''); renderAll(); saveCache_();
     } catch(e){
       setSync('off', 'PARTIAL SYNC — refresh to retry');
     } finally {
@@ -338,6 +338,7 @@ async function refreshTasks(silent){
     state.lastSync = new Date();
     setSync('');
     renderAll();
+    saveCache_();
   } catch(err){
     setSync('off','OFFLINE');
     if(!silent) toast('Could not reach the sheet — '+esc(err.message), true);
@@ -463,7 +464,54 @@ function showLogin(msg){
   if(msg){ e.textContent = msg; e.style.display='block'; } else e.style.display='none';
   if(state.url) fetchPing();
 }
-async function bootstrapAndEnter(remember){
+/* ═══════════ DEVICE CACHE — instant open ═══════════
+   A signed-in device paints its last known board immediately and refreshes in
+   the background, so opening the app feels instant instead of waiting on a
+   round trip to Google. Cleared on sign-out. */
+const CACHE_KEY = 'cf_board_v1';
+const CACHE_MAX = 900000; /* ~0.9 MB — well under the localStorage budget */
+
+function saveCache_(){
+  try {
+    if(!state.me || __pageLoading) return;   /* never cache a half-loaded board */
+    const payload = JSON.stringify({
+      v: 1, at: Date.now(), email: state.email,
+      me: state.me, org: state.org, teams: state.teams, roster: state.roster,
+      formUrl: state.formUrl, sheetUrl: state.sheetUrl,
+      tasks: state.tasks.map(t => Object.assign({}, t, { due: undefined, created: undefined, completed: undefined, startedAt: undefined })),
+    });
+    if(payload.length > CACHE_MAX) return;
+    store.set(CACHE_KEY, payload);
+  } catch(e){}
+}
+
+function loadCache_(){
+  try {
+    const raw = store.get(CACHE_KEY);
+    if(!raw) return null;
+    const j = JSON.parse(raw);
+    /* only trust a cache written by the account that is signing in now */
+    if(!j || j.v !== 1 || !j.me || j.email !== state.email) return null;
+    return j;
+  } catch(e){ return null; }
+}
+
+function clearCache_(){ try { store.del(CACHE_KEY); } catch(e){} }
+
+/* Brand splash for a first-ever sign-in on a device (nothing cached yet) —
+   shown instead of the login form, which would be misleading. */
+function showSplash_(){
+  if(document.getElementById('cf-splash')) return;
+  const el = document.createElement('div');
+  el.id = 'cf-splash';
+  el.style.cssText = 'position:fixed;inset:0;z-index:250;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px';
+  el.innerHTML = '<div class="dotf" style="font-size:30px">CREATIVE<span style="color:var(--accent)">FLOW</span></div>' +
+    '<div style="color:var(--muted);font-size:12px">Loading your board…</div>';
+  document.body.appendChild(el);
+}
+function hideSplash_(){ const el = document.getElementById('cf-splash'); if(el) el.remove(); }
+
+async function bootstrapAndEnter(remember, silent){
   const j = await api('bootstrap', { lite: 1 }); /* small answer: identity + roster only */
   state.me = j.me; state.org = j.org || 'Your Studio'; state.teams = j.teams || [];
   state.roster = j.roster || []; state.formUrl = j.formUrl || ''; state.sheetUrl = j.sheetUrl || '';
@@ -475,7 +523,11 @@ async function bootstrapAndEnter(remember){
   state.lastSync = new Date();
   if(isAssigner() && (tab==='overview')) tab = 'review';
   if(remember){ store.set('cf_url', state.url); store.set('cf_email', state.email); store.set('cf_code', state.code); }
-  enterApp();
+  hideSplash_();
+  /* `silent` = the cached board is already on screen; re-render in place rather
+     than resetting the tab and filters the user may already have changed. */
+  if(silent){ setSync(''); renderAll(); saveCache_(); }
+  else enterApp();
   if(window.__cfOpenTask){
     const _ot = window.__cfOpenTask; window.__cfOpenTask = '';
     let _tries = 0;
@@ -523,9 +575,12 @@ function enterApp(){
   filters = { team:'', member:'', priority:'', status:'', q:'' }; reportSubject = null;
   weekOffset = ([0,6].indexOf(new Date().getDay())!==-1) ? 1 : 0;
   renderAll();
+  saveCache_();
 }
 function logout(){
   store.del('cf_code'); store.del('td_code'); state.code=''; state.me=null;
+  clearCache_();            /* the board must not survive a sign-out */
+  state.tasks = [];
   showLogin();
 }
 
@@ -2281,8 +2336,28 @@ if(__rvTok){
   if(__rvQS.get('api')) state.url = cleanUrl_(__rvQS.get('api').trim());
   bootGuest(__rvTok);
 } else if(state.url && state.email && state.code){
-  $('#login-tag').textContent = 'Reconnecting…';
-  bootstrapAndEnter(false).catch(e=>{
+  /* v5: a signed-in device must never see the login form again.
+     Hide it immediately, paint the last known board from the device cache so
+     the app is usable in milliseconds, and refresh in the background. Only a
+     genuine credential rejection sends anyone back to the login screen. */
+  document.getElementById('login').style.display = 'none';
+  const cached = loadCache_();
+  if(cached){
+    state.me = cached.me; state.org = cached.org || ''; state.teams = cached.teams || [];
+    state.roster = cached.roster || []; state.formUrl = cached.formUrl || ''; state.sheetUrl = cached.sheetUrl || '';
+    state.tasks = (cached.tasks || []).map(parseTask);
+    enterApp();
+    setSync('busy', 'SYNCING…');
+  } else {
+    showSplash_();
+  }
+  bootstrapAndEnter(false, !!cached).catch(e=>{
+    if(cached){                       // we already have a usable board on screen
+      setSync('off', 'OFFLINE — showing your last synced board');
+      if(e.apiError === 'AUTH'){ hideSplash_(); showLogin('Your saved login didn’t match — sign in again.'); }
+      return;
+    }
+    hideSplash_();
     $('#login-tag').textContent = 'Your studio’s task command center';
     showLogin(e.apiError==='AUTH' ? 'Your saved login didn’t match — sign in again.' : null);
   });
