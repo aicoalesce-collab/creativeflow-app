@@ -169,6 +169,17 @@ async function postApi_(url, bodyObj, timeoutMs){
     }
   } finally { clearTimeout(to); }
 }
+/* v5: SELF-HEALING URL.
+   A saved cf_url outranks the built-in one, which is right when an admin
+   deliberately points a client elsewhere — and catastrophic when the saved one
+   is a DEAD deployment. Both exe generations serve on 127.0.0.1:4879, so they
+   share localStorage: every PC that ran the old exe inherits its dead URL and
+   times out forever with no clue why. When a transport-level failure happens
+   and we're not already on the built-in URL, retry once against the built-in
+   one; if that answers, adopt it permanently and say so. */
+const TRANSPORT_FAIL = ['TIMEOUT', 'BLOCKED', 'NOT_JSON', 'PROXY'];
+let __healed = false;
+
 async function api(action, payload, timeoutMs){
   const body = Object.assign({}, payload || {}, { action, email: state.email, code: state.code });
   try {
@@ -176,7 +187,23 @@ async function api(action, payload, timeoutMs){
     if(!j || !j.ok){ const e = new Error((j && (j.message || j.error)) || 'Request failed'); e.apiError = j && j.error; throw e; }
     return j;
   } catch(e){
-    throw friendlyError_(e);
+    const f = friendlyError_(e);
+    const baked = cleanUrl_(DEFAULT_URL);
+    if(!__healed && baked && cleanUrl_(state.url) !== baked && TRANSPORT_FAIL.indexOf(f.apiError) > -1){
+      try {
+        const j2 = await postApi_(baked, body, timeoutMs);
+        if(j2 && j2.ok){
+          __healed = true;
+          const dead = state.url;
+          state.url = baked;
+          store.set('cf_url', baked); store.set('td_url', baked);
+          try { toast('The saved dashboard link was out of date — reconnected to the current one automatically.'); } catch(_){}
+          try { console.warn('CreativeFlow: switched from a dead link (' + dead + ') to ' + baked); } catch(_){}
+          return j2;
+        }
+      } catch(_){ /* the built-in URL failed too — report the original error */ }
+    }
+    throw f;
   }
 }
 /* Translate raw fetch failures into something a human can act on. */
@@ -324,12 +351,32 @@ function canUseGoogle(){
   if(/googleusercontent\.com$|script\.google\.com$/.test(location.hostname)) return false;
   return true;
 }
+function absorbPing_(j){
+  if(!j || !j.ok) return false;
+  state.org = j.org || state.org; state.googleClientId = j.googleClientId || '';
+  state.googleApiKey = j.googleApiKey || ''; state.uploadMode = j.uploadMode || '';
+  state.storageAccount = j.storageAccount || ''; state.latestVersion = j.appVersion || '';
+  return true;
+}
+
 async function fetchPing(){
   if(!state.url) return;
-  try{
-    const j = await postApi_(state.url, { action:'ping' }, 20000);
-    if(j && j.ok){ state.org = j.org || state.org; state.googleClientId = j.googleClientId || ''; state.googleApiKey = j.googleApiKey || ''; state.uploadMode = j.uploadMode || ''; state.storageAccount = j.storageAccount || ''; state.latestVersion = j.appVersion || ''; }
-  }catch(e){}
+  let ok = false;
+  try{ ok = absorbPing_(await postApi_(state.url, { action:'ping' }, 20000)); }catch(e){}
+  /* Heal a stale/dead saved link BEFORE anyone types a code, so the login
+     screen shows the address it will actually use. (See api() for why.) */
+  const baked = cleanUrl_(DEFAULT_URL);
+  if(!ok && !__healed && baked && cleanUrl_(state.url) !== baked){
+    try{
+      if(absorbPing_(await postApi_(baked, { action:'ping' }, 20000))){
+        __healed = true;
+        state.url = baked;
+        store.set('cf_url', baked); store.set('td_url', baked);
+        const su = document.getElementById('saved-url');
+        if(su && document.getElementById('login') && document.getElementById('login').style.display !== 'none') showLogin();
+      }
+    }catch(e){}
+  }
   loginScreenOta_();
 }
 
