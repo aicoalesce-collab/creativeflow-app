@@ -11,7 +11,19 @@ function apiAdmin_(user, req) {
   log_('admin-op', '', user.email, op, true);
   switch (op) {
     case 'setup':           return { ok: true, result: setup() };
-    case 'installTriggers': installTriggers_(); return { ok: true, result: 'triggers reinstalled' };
+    case 'installTriggers': installTriggers_(); return { ok: true, result: 'triggers reinstalled for ' + Session.getEffectiveUser().getEmail() };
+    /* Triggers belong to the USER who created them, not the project. When the
+       web app's executing account changes, the old account's triggers keep
+       firing invisibly — every scheduled job would run twice. This op lets the
+       OLD account (reachable through the deployment it still owns) clear its
+       own set without creating new ones. */
+    case 'deleteMyTriggers': {
+      const mine = ScriptApp.getProjectTriggers();
+      mine.forEach(function (t) { ScriptApp.deleteTrigger(t); });
+      log_('triggers', '', user.email, 'deleted ' + mine.length + ' triggers owned by ' + Session.getEffectiveUser().getEmail(), true);
+      return { ok: true, deleted: mine.length, owner: Session.getEffectiveUser().getEmail() };
+    }
+    case 'whoRuns': return { ok: true, runsAs: Session.getEffectiveUser().getEmail(), triggers: ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }) };
     case 'applyProtections': applyProtections(); return { ok: true, result: 'protections applied' };
     case 'rebuildMirrors':  buildTeamTabs_(SpreadsheetApp.getActiveSpreadsheet()); rebuildMemberTabs(); buildDashboard_(SpreadsheetApp.getActiveSpreadsheet()); return { ok: true, result: 'mirrors rebuilt' };
     case 'syncForm':        syncFormAssignees(); return { ok: true, result: 'form assignee list synced' };
@@ -63,6 +75,8 @@ function adminReport_() {
     tabs: tabs,
     tzOk: tzOk, tzMsg: tzMsg,
     scriptTz: Session.getScriptTimeZone(),
+    sheetOwner: (function () { try { return ss.getOwner().getEmail(); } catch (e) { return '(unavailable)'; } })(),
+    runsAs: (function () { try { return Session.getEffectiveUser().getEmail(); } catch (e) { return '(unavailable)'; } })(),
     sheetUrl: ss.getUrl(),
     migratedAt: String(cfg_('MIGRATED_AT', '')),
     serverTime: new Date().toISOString(),
