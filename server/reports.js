@@ -1,11 +1,17 @@
 /**
- * reports.js — organisation-wide numbers for Team Heads and Super Admins.
+ * reports.js — combined team numbers for Team Heads and Super Admins.
  *
- * A Team Head's task scope is deliberately their own team: they must not be
- * able to read another team's briefs, deliverables or notes. This action gives
- * them the COUNTS across every team without any of that — aggregates only, no
- * titles, no links, no per-task rows. That's the whole point of it being a
- * separate action rather than widening scopedRows_.
+ * A head gets ONE team: their own, combined — every task in the team, their
+ * own work and their members', plus the per-member breakdown. A Super Admin
+ * gets the same shape for every team.
+ *
+ * Aggregates only: no titles, no links, no per-task rows. That's why this is a
+ * separate action rather than a widening of scopedRows_ — a head must never be
+ * able to read another team's briefs, deliverables or notes.
+ *
+ * Heads used to receive every team's counts (the old "All teams" tab). That
+ * view was removed at the owner's request, so the numbers are no longer sent
+ * either — nobody sees a team that isn't theirs.
  */
 
 function apiTeamStats_(user, req) {
@@ -19,14 +25,23 @@ function apiTeamStats_(user, req) {
   const rows = master.getLastRow() < 2 ? []
     : master.getRange(2, 1, master.getLastRow() - 1, LAST_COL2).getValues().filter(r => r[COL.ID - 1]);
 
-  const teamsWanted = teams_().map(t => t.team);
+  /* A head gets their own team; a Super Admin gets every team. (A head with no
+     team on their roster row falls back to all — better a wide report than an
+     empty one.) */
+  const allTeams = teams_().map(t => t.team);
+  const own = String(user.team || '').trim();
+  const teamsWanted = (user.role === 'Team Head' && own && allTeams.indexOf(own) > -1) ? [own] : allTeams;
   const blank = function (name, team) {
     return { name: name, team: team || '', open: 0, overdue: 0, inReview: 0, done: 0, rejected: 0,
              onTime: 0, closedWithDue: 0, rounds: 0, roundsTasks: 0, turnaroundDays: 0, turnaroundTasks: 0 };
   };
   const byTeam = {}; teamsWanted.forEach(t => byTeam[t] = blank(t, t));
   const byPerson = {};
-  const active = roster_().filter(m => m.active && m.role !== 'Super Admin' && m.role !== 'Assigner');
+  /* Members AND the head of each reported team — the head's own work belongs in
+     their team's combined figure. Assigners sit across both teams and admins
+     are not on a team, so neither appears as a person. */
+  const active = roster_().filter(m => m.active && m.role !== 'Super Admin' && m.role !== 'Assigner' &&
+    teamsWanted.indexOf(String(m.team || '').trim()) > -1);
   active.forEach(m => byPerson[m.name] = blank(m.name, m.team));
 
   const now = Date.now();

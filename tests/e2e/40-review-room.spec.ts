@@ -227,12 +227,63 @@ test.describe('review room + guests', () => {
     expect(mk.guest).toBe(true);
   });
 
-  test('guests still cannot resolve, delete or send changes', async ({ page }) => {
+  test('guests still cannot resolve or send changes, or touch studio entries', async ({ page }) => {
     await openAsGuest(page, 'AbCdEfGhJkMnPqRsTuVwXyZ234');
     await expect(page.locator('#rv-send')).toHaveCount(0);        // send-changes button
     await expect(page.locator('#rv-share-btn')).toHaveCount(0);   // share button
-    await expect(page.locator('#rv-scroll .mk-a .mk-btn')).toHaveCount(0);  // resolve/delete
+    await expect(page.locator('#rv-scroll .mk-a .mk-btn')).toHaveCount(0);  // no ✕ on the studio's markers
     expect(await page.evaluate(() => (window as any).rvCanAnnotate())).toBe(true);
+
+    // and the server refuses even if the request is forged
+    const studio = await call(page, { action: 'guestReview', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234' });
+    const theirs = studio.items.find((i: any) => !i.guest);
+    const r = await call(page, { action: 'guestDelete', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234', id: theirs.id, name: theirs.author });
+    expect(r.error).toBe('FORBIDDEN');
+  });
+
+  test('a guest can delete a note they just added @smoke', async ({ page }) => {
+    await openAsGuest(page, 'AbCdEfGhJkMnPqRsTuVwXyZ234');
+    await page.locator('#img-wrap').click({ position: { x: 200, y: 150 } });
+    await page.fill('#rv-form-name', 'Ananya Client');
+    await page.fill('#rv-form-text', 'wrong spot, ignore this');
+    await page.click('#rv-form-save');
+
+    const mine = page.locator('#rv-scroll .mk').last();
+    await expect(mine).toContainText('wrong spot, ignore this');
+
+    const del = mine.locator('.mk-btn');
+    await expect(del).toHaveCount(1);        // exactly one: delete, never resolve
+    await del.click();                        // arm…
+    await expect(del).toHaveText(/sure/i);
+    await del.click();                        // …confirm
+
+    await expect(page.locator('#rv-scroll')).not.toContainText('wrong spot, ignore this');
+    const g = await call(page, { action: 'guestReview', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234' });
+    expect(g.items.some((i: any) => i.text === 'wrong spot, ignore this')).toBe(false);
+  });
+
+  test("a guest cannot delete another guest's note, or one already resolved", async ({ page }) => {
+    await openAsGuest(page, 'AbCdEfGhJkMnPqRsTuVwXyZ234');
+    const made = await call(page, { action: 'guestComment', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234', name: 'First Client', type: 'pin', x: 10, y: 10, text: 'theirs' });
+
+    const wrongName = await call(page, { action: 'guestDelete', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234', id: made.item.id, name: 'Someone Else' });
+    expect(wrongName.error).toBe('FORBIDDEN');
+    expect(wrongName.message).toMatch(/different name/i);
+
+    // once the studio resolves it, it is part of the record
+    await login(page, USERS.headG);
+    const res = await call(page, { action: 'resolveReview', id: made.item.id, resolved: true, email: USERS.headG.email, code: USERS.headG.code });
+    expect(res.ok).toBe(true);
+    const late = await call(page, { action: 'guestDelete', token: 'AbCdEfGhJkMnPqRsTuVwXyZ234', id: made.item.id, name: 'First Client' });
+    expect(late.error).toBe('FORBIDDEN');
+    expect(late.message).toMatch(/already actioned/i);
+  });
+
+  test('a view-only link cannot delete anything', async ({ page }) => {
+    await login(page, USERS.headV);
+    const items = await call(page, { action: 'listReview', taskId: 'VD-0002', email: USERS.headV.email, code: USERS.headV.code });
+    const r = await call(page, { action: 'guestDelete', token: 'ViewOnlyTokenAbCdEfGhJkMn2', id: items.items[0].id, name: items.items[0].author });
+    expect(r.error).toBe('FORBIDDEN');
   });
 
   test('a view-only guest link offers no annotation at all', async ({ page }) => {

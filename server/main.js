@@ -47,6 +47,7 @@ function routes_() {
     appHtml:       { pub: true,  fn: function (u, q) { return apiAppHtml_(); } },
     guestReview:   { pub: true,  fn: function (u, q) { return apiGuestReview_(q); } },
     guestComment:  { pub: true,  lock: true, fn: function (u, q) { return apiGuestComment_(q); } },
+    guestDelete:   { pub: true,  lock: true, fn: function (u, q) { return apiGuestDelete_(q); } },
     // authed reads (no lock — read-only, must stay fast)
     bootstrap:     { fn: apiBootstrap_ },
     tasks:         { fn: function (u, q) { return { ok: true, tasks: apiTasks_(u), serverTime: new Date().toISOString() }; } },

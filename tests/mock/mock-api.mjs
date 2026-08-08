@@ -620,11 +620,28 @@ function guestComment(req) {
   return { ok: true, item };
 }
 
+function guestDelete(req) {
+  const s = state.shares.find(x => x.token === String(req.token || '').trim() && !x.revoked);
+  if (!s) return { ok: false, error: 'AUTH', message: 'This review link is invalid or has been revoked.' };
+  if (s.mode !== 'comment') return { ok: false, error: 'FORBIDDEN', message: 'This link is view-only.' };
+  const id = String(req.id || '').trim(), name = String(req.name || '').trim();
+  if (!id || !name) return { ok: false, error: 'VALIDATION', message: 'Nothing to delete.' };
+  const i = state.reviews.findIndex(x => x.id === id);
+  if (i === -1) return { ok: false, error: 'NOT_FOUND', message: 'That entry is already gone.' };
+  const it = state.reviews[i];
+  if (it.taskId !== s.taskId) return { ok: false, error: 'FORBIDDEN', message: 'That entry is not on this review.' };
+  if (!it.guest) return { ok: false, error: 'FORBIDDEN', message: 'Only your own guest notes can be removed.' };
+  if (String(it.author).trim().toLowerCase() !== name.toLowerCase()) return { ok: false, error: 'FORBIDDEN', message: 'That note was added under a different name.' };
+  if (it.status === 'Resolved') return { ok: false, error: 'FORBIDDEN', message: 'The team has already actioned this point, so it can no longer be removed.' };
+  state.reviews.splice(i, 1);
+  return { ok: true, deletedId: id };
+}
+
 /* ── router + HTTP plumbing ────────────────────────────────────────────── */
 
 function route(req) {
   const action = String(req.action || 'ping');
-  const PUB = { ping: () => ping(), appHtml: () => appHtml(), guestReview: () => guestReview(req), guestComment: () => guestComment(req) };
+  const PUB = { ping: () => ping(), appHtml: () => appHtml(), guestReview: () => guestReview(req), guestComment: () => guestComment(req), guestDelete: () => guestDelete(req) };
   if (PUB[action]) return PUB[action]();
   const u = auth(req.email, req.code);
   if (!u) return { ok: false, error: 'AUTH', message: 'Email or access code did not match the Roster.' };
@@ -637,8 +654,11 @@ function route(req) {
       const days = Math.min(3650, Math.max(1, Math.floor(Number(req.days) || 30)));
       const from = Date.now() - days * 86400000;
       const blank = (name, team) => ({ name, team: team || '', open: 0, overdue: 0, inReview: 0, done: 0, rejected: 0, onTime: 0, closedWithDue: 0, rounds: 0, roundsTasks: 0, turnaroundDays: 0, turnaroundTasks: 0 });
-      const byTeam = {}; TEAMS.forEach(t => byTeam[t.team] = blank(t.team, t.team));
-      const people = state.roster.filter(m => m.active && m.role !== 'Super Admin' && m.role !== 'Assigner');
+      // a head gets their own team only; a Super Admin gets every team
+      const own = String(u.team || '').trim();
+      const wanted = (u.role === 'Team Head' && own && TEAMS.some(t => t.team === own)) ? [own] : TEAMS.map(t => t.team);
+      const byTeam = {}; wanted.forEach(t => byTeam[t] = blank(t, t));
+      const people = state.roster.filter(m => m.active && m.role !== 'Super Admin' && m.role !== 'Assigner' && wanted.includes(String(m.team || '').trim()));
       const byPerson = {}; people.forEach(m => byPerson[m.name] = blank(m.name, m.team));
       const now = Date.now();
       state.tasks.forEach(t => {
@@ -664,7 +684,7 @@ function route(req) {
         onTimePct: b.closedWithDue ? Math.round(b.onTime / b.closedWithDue * 100) : null,
         avgRounds: b.roundsTasks ? Math.round(b.rounds / b.roundsTasks * 10) / 10 : null,
         avgTurnaroundDays: b.turnaroundTasks ? Math.round(b.turnaroundDays / b.turnaroundTasks * 10) / 10 : null });
-      return { ok: true, days, teams: TEAMS.map(t => fin(byTeam[t.team])), people: people.map(m => fin(byPerson[m.name])).filter(p => p.open || p.done || p.rejected), serverTime: nowIso() };
+      return { ok: true, days, teams: wanted.map(t => fin(byTeam[t])), people: people.map(m => fin(byPerson[m.name])).filter(p => p.open || p.done || p.rejected), serverTime: nowIso() };
     },
     taskDetail: () => {
       const t = scopedFull(u).find(x => x.id === String(req.id || '').trim());

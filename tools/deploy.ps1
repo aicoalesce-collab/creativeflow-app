@@ -32,6 +32,10 @@ if (-not $SkipTests) {
 }
 
 Write-Host "== build + push =="
+# stamp the client sentinel first: the smoke check compares it against $Version,
+# so a forgotten bump fails the deploy after the push has already happened
+node "$root\scripts\set-version.mjs" $Version
+if ($LASTEXITCODE) { throw "could not stamp APP_VERSION" }
 & "$root\scripts\build-app.ps1"
 Push-Location $root      # .clasp.json is at the repo root (rootDir: server)
 try {

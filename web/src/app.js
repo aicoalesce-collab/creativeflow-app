@@ -1024,8 +1024,10 @@ function viewReportsCharts(){
     </div></div>
   </div>`;
 
-  html += `<div class="panel"><h3>Task log — ${esc(subj.name.split(' ')[0])}, last 30 days</h3>` +
-    (done30.length? done30.slice().sort((a,b)=>b.completed-a.completed).map(t=>`<div class="trow" onclick="openTaskModal('${t.id}')"><span class="tid">${t.id}</span><span class="tt">${esc(t.title)}</span>${pchip(t.priority)}<span class="due ok">${t.due && t.completed<=t.due?'✓ on time':'⚠ late'} · ${fmtD(t.completed)}</span></div>`).join('') : '<div class="empty">Nothing completed in the last 30 days yet.</div>') + `</div>`;
+  /* was: completed-only, hard-wired to 30 days and blind to the period picker.
+     Now the same panel the team report uses — open work included, period-aware,
+     and printable. */
+  html += personLogHtml_(subj.name);
   return html;
 }
 
@@ -1629,7 +1631,7 @@ function renderSide(){
         <div class="mk-m">${esc(i.author)}${i.guest?' · guest':''} · ${rvWhen(i.created)}${res?' · <b>resolved</b>':''}</div></div>
       <div class="mk-a">
         ${manage ? `<button class="mk-btn" title="${res?'Reopen':'Mark resolved'}" onclick="resolveMk('${i.id}', ${res?'false':'true'})">${res?'↩':'✓'}</button>`:''}
-        ${manage ? `<button class="mk-btn" title="Delete" onclick="delReview('${i.id}', this)">✕</button>`:''}
+        ${(manage || guestOwns_(i)) ? `<button class="mk-btn" title="${guestOwns_(i)?'Remove what you added':'Delete'}" onclick="delReview('${i.id}', this)">✕</button>`:''}
       </div></div>`;
   }).join('');
   h += `<div class="rv-h" style="margin-top:14px">COMMENTS <span>${cms.length || ''}</span></div>`;
@@ -1638,7 +1640,7 @@ function renderSide(){
       <div class="cm-av" style="background:${c.guest || rv.guest ? 'var(--muted)' : memColor(c.author)}">${initials(c.author)}</div>
       <div class="cm-b"><div class="cm-m"><b>${esc(c.author)}</b>${c.guest ? ' <span class="cm-guest">guest</span>' : ''} · ${rvWhen(c.created)}</div>
         <div class="cm-t">${esc(c.text)}</div></div>
-      ${(!rv.guest && (manage || (state.me && c.author===state.me.name))) ? `<button class="mk-btn" title="Delete" onclick="delReview('${c.id}', this)">✕</button>` : ''}
+      ${((!rv.guest && (manage || (state.me && c.author===state.me.name))) || guestOwns_(c)) ? `<button class="mk-btn" title="${guestOwns_(c)?'Remove your comment':'Delete'}" onclick="delReview('${c.id}', this)">✕</button>` : ''}
     </div>`).join('');
   box.innerHTML = h;
   setSendLabel();
@@ -1792,10 +1794,19 @@ async function delReview(id, btn){
     return;
   }
   try{
-    await api('deleteReview', { id });
+    if(rv.guest) await api('guestDelete', { token: rv.guestTok, id, name: rv.guestName });
+    else await api('deleteReview', { id });
     rv.items = rv.items.filter(x=>x.id!==id);
-    renderSide(); updatePins();
+    renderSide(); updatePins(); renderTools();
   }catch(err){ toast('Could not delete — '+esc(err.message), true); }
+}
+
+/* A guest may remove what they themselves just added — a mis-clicked pin or a
+   note they want to redo — but nothing of the studio's, and nothing the team
+   has already resolved. Matches the server rule in apiGuestDelete_. */
+function guestOwns_(i){
+  return rv.guest && rv.mode === 'comment' && i.guest && i.status !== 'Resolved' &&
+    !!rv.guestName && String(i.author).trim().toLowerCase() === rv.guestName.trim().toLowerCase();
 }
 
 /* ── send all open changes → task goes to Revisions + email digest ── */
@@ -1977,8 +1988,8 @@ async function pollGuest(){
 let reportPeriod = store.get('cf_report_period') || 'month';
 function setReportPeriod(p){
   reportPeriod = p; store.set('cf_report_period', p);
-  teamStats = null;                       /* the all-teams answer is period-scoped */
-  if(reportScope === 'all' && canSeeAllTeams()){ setReportScope('all'); return; }
+  teamStats = null;                       /* the combined answer is period-scoped */
+  if(reportScope === 'team' && canSeeTeamReport()){ setReportScope('team'); return; }
   renderAll();
 }
 function periodStart_(){
@@ -2034,18 +2045,18 @@ function canStartOwn_(){
    A head's task scope stays their own team — this view asks the server for
    COUNTS across every team instead, so they get the whole picture without
    being able to read another team's briefs. */
-let reportScope = 'mine';     /* 'mine' | 'all' */
+let reportScope = 'mine';     /* 'mine' | 'team' */
 let teamStats = null;         /* last teamStats answer */
 let teamStatsLoading = false;
 
-function canSeeAllTeams(){ return isAdmin() || isHead(); }
+function canSeeTeamReport(){ return isAdmin() || isHead(); }
 
 async function setReportScope(v){
   reportScope = v;
-  if(v === 'all' && !teamStats && !teamStatsLoading){
+  if(v === 'team' && !teamStats && !teamStatsLoading){
     teamStatsLoading = true; renderContent();
     try { teamStats = await api('teamStats', { days: periodDays_() }); }
-    catch(e){ toast('Could not load the all-teams report — ' + esc(e.message), true); reportScope = 'mine'; }
+    catch(e){ toast('Could not load the combined report — ' + esc(e.message), true); reportScope = 'mine'; }
     finally { teamStatsLoading = false; }
   }
   renderContent();
@@ -2060,62 +2071,117 @@ function statTile_(label, value, sub){
     (sub ? `<div class="k-s">${esc(sub)}</div>` : '') + `</div>`;
 }
 
-function allTeamsHtml(){
-  if(teamStatsLoading || !teamStats) return `<div class="panel"><div class="empty">Loading the all-teams report…</div></div>`;
+/* One section per team the viewer is entitled to: the team's COMBINED figures
+   (the head's own work and their members' together) and, under it, the same
+   numbers person by person. A head gets their own team; a Super Admin gets one
+   section per team. The old studio-wide "All teams" mash-up is gone. */
+function teamCombinedHtml(){
+  if(teamStatsLoading || !teamStats) return `<div class="panel"><div class="empty">Loading the combined report…</div></div>`;
   const t = teamStats;
-  const sum = (k) => t.teams.reduce((a,x)=> a + (x[k]||0), 0);
-  const rowsT = t.teams.map(x=>`<tr>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600">${tdot(x.name)}${esc(x.name)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.open}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line);${x.overdue?'color:var(--accent);font-weight:700':''}">${x.overdue}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.inReview}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.done}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.onTimePct==null?'—':x.onTimePct+'%'}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgRounds==null?'—':x.avgRounds}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgTurnaroundDays==null?'—':x.avgTurnaroundDays+'d'}</td>
-    </tr>`).join('');
-  const rowsP = t.people.sort((a,b)=> b.open-a.open || b.done-a.done).map(x=>`<tr>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${av(x.name,24)} ${esc(x.name)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${tdot(x.team)}${esc(x.team)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.open}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line);${x.overdue?'color:var(--accent);font-weight:700':''}">${x.overdue}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.done}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.onTimePct==null?'—':x.onTimePct+'%'}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgTurnaroundDays==null?'—':x.avgTurnaroundDays+'d'}</td>
+  if(!t.teams || !t.teams.length) return `<div class="panel"><div class="empty">No team is attached to your roster row, so there's nothing to combine.</div></div>`;
+
+  const td = (v, extra) => `<td style="padding:8px 10px;border-bottom:1px solid var(--line);${extra||''}">${v}</td>`;
+  return t.teams.map(x => {
+    const people = t.people.filter(p => p.team === x.name).sort((a,b)=> b.open-a.open || b.done-a.done);
+    const rows = people.map(p => `<tr>
+        ${td(av(p.name,24) + ' ' + esc(p.name))}
+        ${td(p.open)}
+        ${td(p.overdue, p.overdue?'color:var(--accent);font-weight:700':'')}
+        ${td(p.done)}
+        ${td(p.onTimePct==null?'—':p.onTimePct+'%')}
+        ${td(p.avgTurnaroundDays==null?'—':p.avgTurnaroundDays+'d')}
+      </tr>`).join('');
+    return `<div class="panel">
+      <div class="p-h"><h3>${tdot(x.name)}${esc(x.name)} team · combined · last ${t.days} days</h3></div>
+      <div class="kpis" style="margin:10px 0 6px">
+        ${statTile_('Open', x.open)}
+        ${statTile_('Overdue', x.overdue)}
+        ${statTile_('In review', x.inReview)}
+        ${statTile_('Completed', x.done, 'in this period')}
+      </div>
+      <div class="kpis" style="margin:0 0 16px">
+        ${statTile_('On time', x.onTimePct==null?null:x.onTimePct+'%')}
+        ${statTile_('Avg rounds', x.avgRounds)}
+        ${statTile_('Avg turnaround', x.avgTurnaroundDays==null?null:x.avgTurnaroundDays+'d')}
+        ${statTile_('Rejected', x.rejected)}
+      </div>
+      <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+        <th>Person</th><th>Open</th><th>Overdue</th><th>Done</th><th>On time</th><th>Avg turnaround</th>
+      </tr></thead><tbody>${rows || `<tr>${td('Nobody on this team has activity in this period', 'opacity:.6')}<td colspan="5"></td></tr>`}</tbody></table></div>
+      ${/* narrow screens hide .tbl-wrap entirely — without this the phone shows
+            team totals and no people at all, which the old report did too */''}
+      <div class="mob-list">${people.map(p=>`<div style="display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--line)">
+          ${av(p.name,26)}
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</div>
+            <div style="font-size:10.5px;color:var(--muted)">${p.done} done${p.onTimePct==null?'':' · '+p.onTimePct+'% on time'}${p.avgTurnaroundDays==null?'':' · '+p.avgTurnaroundDays+'d avg'}</div>
+          </div>
+          <div style="text-align:right;font-size:11px;white-space:nowrap"><b>${p.open}</b> open${p.overdue?`<br><b style="color:var(--accent)">${p.overdue} overdue</b>`:''}</div>
+        </div>`).join('') || `<div class="empty">Nobody on this team has activity in this period.</div>`}</div>
+      <div class="login-note" style="padding:0 4px 4px">Combined counts every task in the team — including work not assigned to anyone yet — so it can be higher than the rows added up.</div>
+    </div>` + teamLogHtml_(x.name);
+  }).join('');
+}
+
+/* The work behind the numbers. Built from the tasks the client already holds —
+   no extra call, nothing new over the wire, and it can only ever show what this
+   person is already allowed to see. Used by both report views. */
+function logList_(match){
+  const start = periodStart_().getTime();
+  const ms = d => d ? d.getTime() : null;
+  const all = (state.tasks || []).filter(match);
+  const open = all.filter(t => !isClosed(t))
+    .sort((a,b) => (ms(a.due) == null ? Infinity : ms(a.due)) - (ms(b.due) == null ? Infinity : ms(b.due)));
+  const closed = all.filter(t => isClosed(t) && ms(t.completed) != null && ms(t.completed) >= start)
+    .sort((a,b) => ms(b.completed) - ms(a.completed));
+  return open.concat(closed);
+}
+
+function taskLogPanel_(heading, list, showWho){
+  const td = (v, extra) => `<td style="padding:7px 10px;border-bottom:1px solid var(--line);${extra||''}">${v}</td>`;
+  const rows = list.map(t => `<tr onclick="openTaskModal('${t.id}')" style="cursor:pointer">
+      ${td(`<b>${esc(t.title)}</b><br><small style="color:var(--muted)">${esc(t.id)}</small>`)}
+      ${showWho ? td(t.assignee ? esc(t.assignee) : '<span style="color:var(--muted)">unassigned</span>') : ''}
+      ${td(schip(t))}
+      ${td(dueLabel(t), isOverdue(t) ? 'color:var(--accent);font-weight:600' : '')}
+      ${td(t.completed ? fmtD(t.completed) : '—')}
+      ${td(t.revisions || 0)}
     </tr>`).join('');
 
   return `<div class="panel">
-    <div class="p-h"><h3>Whole studio · last ${t.days} days</h3></div>
-    <div class="kpis" style="margin:10px 0 16px">
-      ${statTile_('Open', sum('open'))}
-      ${statTile_('Overdue', sum('overdue'))}
-      ${statTile_('In review', sum('inReview'))}
-      ${statTile_('Completed', sum('done'), 'in this period')}
-    </div>
-    <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
-      <th>Team</th><th>Open</th><th>Overdue</th><th>In review</th><th>Done</th><th>On time</th><th>Avg rounds</th><th>Avg turnaround</th>
-    </tr></thead><tbody>${rowsT}</tbody></table></div>
-  </div>
-  <div class="panel">
-    <div class="p-h"><h3>Everyone</h3></div>
-    <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
-      <th>Person</th><th>Team</th><th>Open</th><th>Overdue</th><th>Done</th><th>On time</th><th>Avg turnaround</th>
-    </tr></thead><tbody>${rowsP}</tbody></table></div>
-    <div class="login-note" style="padding:0 4px 4px">Counts only — other teams' task details stay private to their team.</div>
+    <div class="p-h"><h3>${heading} <span style="color:var(--muted);font-weight:400">· ${list.length} task${list.length===1?'':'s'}</span></h3></div>
+    ${list.length ? `<div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+        <th>Task</th>${showWho ? '<th>Who</th>' : ''}<th>Status</th><th>Due</th><th>Finished</th><th>Rounds</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="mob-list">${list.map(t => rowHtml(t, true)).join('')}</div>`
+    : `<div class="empty">Nothing open, and nothing finished in this period.</div>`}
+    <div class="login-note" style="padding:0 4px 4px">Everything still open, plus everything finished in this period. Tap a row to open the task.</div>
   </div>`;
 }
 
+function teamLogHtml_(team){
+  return taskLogPanel_(`${tdot(team)}${esc(team)} team · task log`, logList_(t => String(t.team || '') === team), true);
+}
+function personLogHtml_(name){
+  return taskLogPanel_(`${esc(name)} · task log`, logList_(t => String(t.assignee || '') === name), false);
+}
+
+function printBtnHtml_(){
+  return `<button class="ghostbtn" onclick="window.print()">🖨 Print / save as PDF</button>`;
+}
+
 function scopeSwitchHtml(){
-  if(!canSeeAllTeams()) return '';
-  return `<div class="filters" style="margin-bottom:12px">
+  if(!canSeeTeamReport()) return '';
+  return `<div class="filters" style="margin-bottom:12px;align-items:center">
     <button class="btn ${reportScope==='mine'?'btn-p':''}" onclick="setReportScope('mine')">${isAdmin()?'By person':'My team'}</button>
-    <button class="btn ${reportScope==='all'?'btn-p':''}" onclick="setReportScope('all')">All teams</button>
+    <button class="btn ${reportScope==='team'?'btn-p':''}" onclick="setReportScope('team')">${isAdmin()?'Teams combined':'Team combined'}</button>
+    ${reportScope==='team' ? `<span style="margin-left:auto">${printBtnHtml_()}</span>` : ''}
   </div>`;
 }
 
 function viewReports(){
-  if(reportScope === 'all' && canSeeAllTeams()){
-    return reportStatsHtml() + scopeSwitchHtml() + allTeamsHtml();
+  if(reportScope === 'team' && canSeeTeamReport()){
+    return reportStatsHtml() + scopeSwitchHtml() + teamCombinedHtml();
   }
   return reportStatsHtml() + scopeSwitchHtml() + (isAssigner() ? '' : viewReportsCharts());
 }
@@ -2443,5 +2509,5 @@ if(__rvTok){
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, allTeamsHtml, scopeSwitchHtml, canSeeAllTeams, periodDays_ });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_ });
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });

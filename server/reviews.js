@@ -249,3 +249,45 @@ function apiGuestComment_(req) {
   log_('guest-comment', share.taskId, name, text.slice(0, 60), true);
   return { ok: true, item: reviewRowToObj_(rowVals) };
 }
+
+/**
+ * { action:'guestDelete', token, id, name } → { ok, deletedId }
+ * A guest who marked the wrong thing can take it back. Deliberately narrow:
+ *   - the link must still be live and comment-mode;
+ *   - the entry must belong to the task that link opens;
+ *   - it must be a GUEST entry (never studio work) posted under the same name;
+ *   - and it must still be Open — once the team has resolved a point, deleting
+ *     it would erase what they acted on.
+ * There is no column to record which link created a row, so the name is the
+ * key; the client also only offers the button on entries it just made. Worst
+ * case is one client removing another client's note on the same task under the
+ * same display name, which is a fair trade for letting them fix their own.
+ */
+function apiGuestDelete_(req) {
+  const share = shareByToken_(String(req.token || '').trim());
+  if (!share) return { ok: false, error: 'AUTH', message: 'This review link is invalid or has been revoked.' };
+  if (share.mode !== 'comment') return { ok: false, error: 'FORBIDDEN', message: 'This link is view-only.' };
+  const id = String(req.id || '').trim();
+  const name = String(req.name || '').trim();
+  if (!id || !name) return { ok: false, error: 'VALIDATION', message: 'Nothing to delete.' };
+
+  const sh = reviewsSheet_();
+  if (sh.getLastRow() < 2) return { ok: false, error: 'NOT_FOUND', message: 'That entry is already gone.' };
+  const vals = sh.getRange(2, 1, sh.getLastRow() - 1, REVIEW_HEADERS.length).getValues();
+  for (let i = 0; i < vals.length; i++) {
+    const r = vals[i];
+    if (String(r[0]) !== id) continue;
+    if (String(r[1]) !== share.taskId) return { ok: false, error: 'FORBIDDEN', message: 'That entry is not on this review.' };
+    if (String(r[7]) !== 'Yes') return { ok: false, error: 'FORBIDDEN', message: 'Only your own guest notes can be removed.' };
+    if (String(r[6]).trim().toLowerCase() !== name.toLowerCase()) {
+      return { ok: false, error: 'FORBIDDEN', message: 'That note was added under a different name.' };
+    }
+    if (String(r[9]) === 'Resolved') {
+      return { ok: false, error: 'FORBIDDEN', message: 'The team has already actioned this point, so it can no longer be removed.' };
+    }
+    sh.deleteRow(i + 2);
+    log_('guest-delete', share.taskId, name, id, true);
+    return { ok: true, deletedId: id };
+  }
+  return { ok: false, error: 'NOT_FOUND', message: 'That entry is already gone.' };
+}

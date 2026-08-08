@@ -6,7 +6,7 @@
 <title>CreativeFlow</title>
 <script>
 /* CF-BOOT — do not rename; serveApp_ rewrites these lines, exe+ping regex APP_VERSION */
-window.APP_VERSION = '5.0.1';
+window.APP_VERSION = '5.1.0';
 window.CF_INJECTED_API = '';
 window.CF_DEFAULT_API = 'https://script.google.com/macros/s/AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl/exec';
 window.CF_GUEST_TOKEN = '';
@@ -370,6 +370,12 @@ svg text{font-family:var(--font-b)}
   #rail,#topbar,.filters,.rep-head,.cal-hint,#toasts,#notif-panel,#login{display:none!important}
   #app.ready{display:block}#content{overflow:visible;padding:0}
   body{background:#fff;color:#1b1b1b}.panel{border:none;padding:8px 0;break-inside:avoid}
+  /* paper always gets the full table, never the phone card list — otherwise
+     printing from a narrow window silently drops every column but the title */
+  .tbl-wrap{display:block!important;overflow:visible!important}
+  .mob-list{display:none!important}
+  table.tasks{width:100%;border-collapse:collapse}
+  table.tasks tr{break-inside:avoid}
 }
 
 /* ── review room (v3.1) ─────────────── */
