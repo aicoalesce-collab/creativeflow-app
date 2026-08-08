@@ -1,0 +1,23 @@
+1 ICON "creativeflow.ico"
+
+1 VERSIONINFO
+FILEVERSION 4,9,2,0
+PRODUCTVERSION 4,9,2,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "FOAID Studio"
+      VALUE "FileDescription", "CreativeFlow - studio task dashboard"
+      VALUE "FileVersion", "4.9.2"
+      VALUE "ProductName", "CreativeFlow"
+      VALUE "ProductVersion", "4.9.2"
+      VALUE "OriginalFilename", "CreativeFlow.exe"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

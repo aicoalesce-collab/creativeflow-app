@@ -16,3 +16,4 @@ exe/cf5-test.exe
 tools/probe/probe.exe
 .env
 .env.*
+exe/rsrc_windows_*.syso
