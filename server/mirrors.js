@@ -19,7 +19,8 @@ function buildTeamTabs_(ss) {
 /** Creates / refreshes one read-only tab per active roster member. */
 function rebuildMemberTabs() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const members = roster_().filter(m => m.active && m.name && m.name.indexOf('Sample') !== 0);
+  /* Assigners request work rather than do it — they get no personal tab. */
+  const members = roster_().filter(m => m.active && m.name && m.name.indexOf('Sample') !== 0 && m.role !== 'Assigner');
   const wanted = {};
   members.forEach(m => {
     const tabName = MEMBER_TAB_PREFIX + m.name;

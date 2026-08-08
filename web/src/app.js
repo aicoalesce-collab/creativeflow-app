@@ -94,6 +94,8 @@ function isMyRequest(t){ return isAssigner() && state.me && t.requester===state.
 function canDecide(t){ return canManage(t) || (isMyRequest(t) && t.status==='In Review' && t.stage==='Assigner'); }
 function roleLabel(m){
   if(m.role==='Super Admin') return 'SUPER ADMIN';
+  /* Assigners span both teams, so they get no craft label. */
+  if(m.role==='Assigner') return 'ASSIGNER';
   const craft = m.team==='Video' ? 'EDITOR' : 'DESIGNER';
   return m.role==='Team Head' ? 'HEAD '+craft : (m.team==='Video'?'VIDEO EDITOR':'GRAPHIC DESIGNER');
 }
@@ -1192,10 +1194,15 @@ function openNewTaskModal(){
       <div class="field"><label>Assign to (optional)</label><select id="n-assignee"><option value="">Let the team head decide</option>${state.roster.filter(m=>m.role!=='Super Admin').map(m=>`<option value="${esc(m.name)}" data-team="${esc(m.team)}">${esc(m.name)} — ${esc(m.team)}</option>`).join('')}</select></div>
       <div class="field"><label>Brief / asset link</label><input id="n-brief" placeholder="drive.google.com/…"></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-g" onclick="closeModal()">Cancel</button><button class="btn btn-p" id="create-btn" onclick="createTask(this)">Create task</button></div></div>`;
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="create-again-btn" onclick="createTask(this,'again')" title="Save this one and keep the box open for the next">Save &amp; add another</button>
+      ${canStartOwn_() ? `<button class="btn" id="create-start-btn" onclick="createTask(this,'start')" title="Save it and start the clock now">Save &amp; start work</button>` : ''}
+      <button class="btn btn-p" id="create-btn" onclick="createTask(this)">Save</button>
+    </div></div>`;
   $('#overlay').classList.add('open');
 }
-async function createTask(btn){
+async function createTask(btn, mode){
   const g = i => document.getElementById(i);
   const title = g('n-title').value.trim();
   if(!title){ toast('Give the task a title first.', true); return; }
@@ -1203,7 +1210,8 @@ async function createTask(btn){
   const sel = g('n-assignee');
   const assignee = sel.value;
   const team = assignee ? sel.options[sel.selectedIndex].dataset.team : g('n-team').value;
-  if(btn){ btn.disabled = true; btn.textContent = 'Creating…'; }
+  const label0 = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
   try{
     setSync('busy','SAVING…');
     const j = await api('createTask', {
@@ -1211,10 +1219,29 @@ async function createTask(btn){
       priority: g('n-priority').value, dueDate: g('n-due').value, dueTime: '18:00',
     });
     upsert(j.task); state.lastSync=new Date(); setSync('');
+    let extra = '';
+    /* "Save & start work": stamp the start time immediately so the person
+       doesn't have to reopen the task just to press Start. */
+    if(mode === 'start'){
+      try {
+        const s2 = await api('startTask', { id: j.task.id });
+        upsert(s2.task);
+        extra = ' · started';
+      } catch(e){ toast('Created, but could not start it — ' + esc(e.message), true); }
+    }
+    toast(`<b>${j.task.id}</b> created${extra}${j.info? ' · '+esc(j.info):''}`);
+    if(mode === 'again'){
+      /* keep team, priority and due date — the fields people repeat — and
+         clear the ones that describe this particular task */
+      ['n-title','n-desc','n-brief'].forEach(id=>{ const el=g(id); if(el) el.value=''; });
+      renderAll();
+      const t0 = g('n-title'); if(t0) t0.focus();
+      if(btn){ btn.disabled=false; btn.textContent=label0; }
+      return;
+    }
     closeModal(); renderAll();
-    toast(`<b>${j.task.id}</b> created in the master sheet${j.info? ' · '+esc(j.info):''}`);
   }catch(err){
-    if(btn){ btn.disabled=false; btn.textContent='Create task'; }
+    if(btn){ btn.disabled=false; btn.textContent=label0 || 'Save'; }
     setSync('off','OFFLINE');
     toast('Could not create the task — '+esc(err.message), true);
   }
@@ -1497,6 +1524,9 @@ function rvWhen(iso){
 }
 function rvTask(){ return rv.guest ? rv.gTask : state.tasks.find(x=>x.id===rv.taskId); }
 function rvManage(){ const t = rvTask(); return !rv.guest && t && canDecide(t); }
+/* Guests on a comment link can ADD pins and markers — they still cannot
+   resolve, delete or send changes. That stays with the studio. */
+function rvCanAnnotate(){ return rv.guest ? rv.mode === 'comment' : rvManage(); }
 function rvMine(t){ return !rv.guest && state.me && (t.assignee===state.me.name || t.requester===state.me.name); }
 
 /* What kind of thing is the deliverable link? */
@@ -1646,7 +1676,7 @@ function renderTools(){
     box.innerHTML = `<div class="hint">${rv.mode==='comment' ? 'You\'re reviewing as a guest — click the ⏱ / 📍 chips to jump to each point, and reply below.' : 'View-only guest link — click the ⏱ / 📍 chips to see each point in place.'}</div>`;
     return;
   }
-  const manage = rvManage();
+  const manage = rvCanAnnotate();   /* guests on a comment link may annotate too */
   if(rv.form){
     box.innerHTML = `<div class="rv-form">
       <div class="rv-form-h">${rv.form.type==='marker' ? '⏱ CHANGE AT '+tcStr(rv.form.tc) : '📍 PIN AT THE MARKED SPOT'}</div>
@@ -1668,7 +1698,7 @@ function renderTools(){
     return;
   }
   if(!manage){
-    box.innerHTML = `<div class="hint">${rvMine(t) ? 'Your head marks the changes on the file — fix them, upload a new version, and reply below.' : 'Change markers are added by the team head. The comments below are open to everyone on the task.'}</div>`;
+    box.innerHTML = `<div class="hint">${rv.guest ? 'This link is view-only — you can read the changes but not add any.' : rvMine(t) ? 'Your head marks the changes on the file — fix them, upload a new version, and reply below.' : 'Change markers are added by the team head. The comments below are open to everyone on the task.'}</div>`;
     return;
   }
   const k = rv.media.kind;
@@ -1748,7 +1778,7 @@ function renderCompose(){
 
 /* ── adding markers / pins / comments ── */
 function imgClick(ev){
-  if(rv.guest || !rvManage()) return;
+  if(!rvCanAnnotate()) return;
   const wrap = document.getElementById('img-wrap'); if(!wrap) return;
   const r = wrap.getBoundingClientRect();
   const x = Math.round((ev.clientX - r.left) / r.width * 1000) / 10;
@@ -1783,10 +1813,19 @@ async function saveForm(btn){
   const f = rv.form; if(!f) return;
   if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
   try{
-    const payload = f.type==='marker'
-      ? { taskId: rv.taskId, type:'marker', tc: f.tc, text, version: rv.viewVersion }
-      : { taskId: rv.taskId, type:'pin', x: f.x, y: f.y, text, version: rv.viewVersion };
-    const j = await api('addReview', payload);
+    const base = f.type==='marker'
+      ? { type:'marker', tc: f.tc, text, version: rv.viewVersion }
+      : { type:'pin', x: f.x, y: f.y, text, version: rv.viewVersion };
+    let j;
+    if(rv.guest){
+      const nameEl = document.getElementById('rv-guest-name');
+      const name = (nameEl ? nameEl.value.trim() : '') || rv.guestName;
+      if(!name || name.length < 2){ toast('Enter your name first (below the comments).', true); if(btn){btn.disabled=false; btn.textContent='Add change';} return; }
+      rv.guestName = name; store.set('cf_guest_name', name);
+      j = await api('guestComment', Object.assign({ token: rv.guestTok, name }, base));
+    } else {
+      j = await api('addReview', Object.assign({ taskId: rv.taskId }, base));
+    }
     rv.items.push(j.item); rv.form = null;
     renderTools(); renderSide(); updatePins();
   }catch(err){
@@ -1908,12 +1947,20 @@ async function saveDeliverable(btn){
 
 /* ── guest share links ── */
 function shareUrl(tok){
-  /* v5: guests get the hosted PWA link (short, CDN-fast, params survive).
-     From the exe/localhost or Apps-Script-served pages fall back to ?page=app —
-     old-style links keep working forever via serveApp_ injection. */
+  /* Short by design: the hosted app already knows which sheet it belongs to,
+     so the long &api= tail is unnecessary. A hash route keeps it shorter still
+     and survives static hosting.  →  https://…/creativeflow-app/#/r/AbCd1234
+     Old ?review=…&api=… links keep working (see the boot block). */
   const api = state.url || DEFAULT_URL;
-  if(/^https:$/.test(location.protocol) && !/googleusercontent\.com$|script\.google\.com$/.test(location.hostname)){
-    return location.origin + location.pathname + '?review=' + tok + '&api=' + encodeURIComponent(api);
+  /* Use our own origin whenever this copy of the app can actually serve the
+     review route. That excludes Apps-Script-served pages (they can't own a
+     URL) and the desktop app (a 127.0.0.1 link is useless to a client) — both
+     fall back to ?page=app, which works for guests anywhere. */
+  const hosted = !isDesktopApp() && !/googleusercontent\.com$|script\.google\.com$/.test(location.hostname);
+  if(hosted){
+    const base = location.origin + location.pathname.replace(/index\.html$/, '');
+    const sameSheet = cleanUrl_(api) === cleanUrl_(DEFAULT_URL);
+    return base + '#/r/' + tok + (sameSheet ? '' : '?api=' + encodeURIComponent(api));
   }
   return api + (api.indexOf('?')>-1 ? '&' : '?') + 'page=app&review=' + tok;
 }
@@ -1942,7 +1989,8 @@ function renderShare(){
 }
 async function createShareClick(btn){
   const mode = (document.getElementById('rv-share-mode')||{}).value || 'view';
-  if(btn){ btn.disabled = true; btn.textContent = 'Creating…'; }
+  const label0 = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
   try{
     const j = await api('createShare', { taskId: rv.taskId, mode });
     rv.shares.unshift({ token: j.token, mode: j.mode, created: '' });
@@ -2027,7 +2075,12 @@ async function pollGuest(){
 
 /* ═══════════ PERIOD REPORTS + BULK ADD (v4.2) ═══════════ */
 let reportPeriod = store.get('cf_report_period') || 'month';
-function setReportPeriod(p){ reportPeriod = p; store.set('cf_report_period', p); renderAll(); }
+function setReportPeriod(p){
+  reportPeriod = p; store.set('cf_report_period', p);
+  teamStats = null;                       /* the all-teams answer is period-scoped */
+  if(reportScope === 'all' && canSeeAllTeams()){ setReportScope('all'); return; }
+  renderAll();
+}
 function periodStart_(){
   const n = new Date();
   if(reportPeriod==='week'){ const d = new Date(n.getFullYear(), n.getMonth(), n.getDate()); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d; }
@@ -2067,8 +2120,104 @@ function reportStatsHtml(){
     <div style="font-size:10.5px;color:var(--muted);margin-top:10px">${isAssigner()? 'Counting only the tasks you requested.' : isHead()? 'Counting your team\'s tasks.' : 'Counting all teams.'} Averages use tasks completed in the period.</div>
   </div>`;
 }
+/* "Save & start work" is only offered when the creator would be the person
+   doing the work — otherwise it would be starting someone else's clock. A
+   member creating a task takes it themselves; an assigner never does. */
+function canStartOwn_(){
+  if(!state.me || isAssigner()) return false;
+  const sel = document.getElementById('n-assignee');
+  const chosen = sel ? sel.value : '';
+  return !chosen || chosen === state.me.name;
+}
+
+/* ═══════════ ALL-TEAMS REPORT (heads + admin) ═══════════
+   A head's task scope stays their own team — this view asks the server for
+   COUNTS across every team instead, so they get the whole picture without
+   being able to read another team's briefs. */
+let reportScope = 'mine';     /* 'mine' | 'all' */
+let teamStats = null;         /* last teamStats answer */
+let teamStatsLoading = false;
+
+function canSeeAllTeams(){ return isAdmin() || isHead(); }
+
+async function setReportScope(v){
+  reportScope = v;
+  if(v === 'all' && !teamStats && !teamStatsLoading){
+    teamStatsLoading = true; renderContent();
+    try { teamStats = await api('teamStats', { days: periodDays_() }); }
+    catch(e){ toast('Could not load the all-teams report — ' + esc(e.message), true); reportScope = 'mine'; }
+    finally { teamStatsLoading = false; }
+  }
+  renderContent();
+}
+
+function periodDays_(){
+  return reportPeriod === 'week' ? 7 : reportPeriod === 'month' ? 30 : reportPeriod === 'year' ? 365 : 3650;
+}
+
+function statTile_(label, value, sub){
+  return `<div class="kpi"><div class="k-l">${esc(label)}</div><div class="k-v">${value == null ? '—' : value}</div>` +
+    (sub ? `<div class="k-s">${esc(sub)}</div>` : '') + `</div>`;
+}
+
+function allTeamsHtml(){
+  if(teamStatsLoading || !teamStats) return `<div class="panel"><div class="empty">Loading the all-teams report…</div></div>`;
+  const t = teamStats;
+  const sum = (k) => t.teams.reduce((a,x)=> a + (x[k]||0), 0);
+  const rowsT = t.teams.map(x=>`<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600">${tdot(x.name)}${esc(x.name)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.open}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line);${x.overdue?'color:var(--accent);font-weight:700':''}">${x.overdue}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.inReview}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.done}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.onTimePct==null?'—':x.onTimePct+'%'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgRounds==null?'—':x.avgRounds}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgTurnaroundDays==null?'—':x.avgTurnaroundDays+'d'}</td>
+    </tr>`).join('');
+  const rowsP = t.people.sort((a,b)=> b.open-a.open || b.done-a.done).map(x=>`<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${av(x.name,24)} ${esc(x.name)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${tdot(x.team)}${esc(x.team)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.open}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line);${x.overdue?'color:var(--accent);font-weight:700':''}">${x.overdue}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.done}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.onTimePct==null?'—':x.onTimePct+'%'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--line)">${x.avgTurnaroundDays==null?'—':x.avgTurnaroundDays+'d'}</td>
+    </tr>`).join('');
+
+  return `<div class="panel">
+    <div class="p-h"><h3>Whole studio · last ${t.days} days</h3></div>
+    <div class="kpis" style="margin:10px 0 16px">
+      ${statTile_('Open', sum('open'))}
+      ${statTile_('Overdue', sum('overdue'))}
+      ${statTile_('In review', sum('inReview'))}
+      ${statTile_('Completed', sum('done'), 'in this period')}
+    </div>
+    <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+      <th>Team</th><th>Open</th><th>Overdue</th><th>In review</th><th>Done</th><th>On time</th><th>Avg rounds</th><th>Avg turnaround</th>
+    </tr></thead><tbody>${rowsT}</tbody></table></div>
+  </div>
+  <div class="panel">
+    <div class="p-h"><h3>Everyone</h3></div>
+    <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+      <th>Person</th><th>Team</th><th>Open</th><th>Overdue</th><th>Done</th><th>On time</th><th>Avg turnaround</th>
+    </tr></thead><tbody>${rowsP}</tbody></table></div>
+    <div class="login-note" style="padding:0 4px 4px">Counts only — other teams' task details stay private to their team.</div>
+  </div>`;
+}
+
+function scopeSwitchHtml(){
+  if(!canSeeAllTeams()) return '';
+  return `<div class="filters" style="margin-bottom:12px">
+    <button class="btn ${reportScope==='mine'?'btn-p':''}" onclick="setReportScope('mine')">${isAdmin()?'By person':'My team'}</button>
+    <button class="btn ${reportScope==='all'?'btn-p':''}" onclick="setReportScope('all')">All teams</button>
+  </div>`;
+}
+
 function viewReports(){
-  return reportStatsHtml() + (isAssigner() ? '' : viewReportsCharts());
+  if(reportScope === 'all' && canSeeAllTeams()){
+    return reportStatsHtml() + scopeSwitchHtml() + allTeamsHtml();
+  }
+  return reportStatsHtml() + scopeSwitchHtml() + (isAssigner() ? '' : viewReportsCharts());
 }
 
 /* ── bulk add ── */
@@ -2330,7 +2479,13 @@ document.addEventListener('visibilitychange', ()=>{ if(state.me && document.visi
 /* v5: restore the tab from the hash before first render */
 (function(){ const h = location.hash.slice(1); if(h && ['overview','tasks','review','calendar','reports'].indexOf(h) > -1) tab = h; })();
 const __rvQS = new URLSearchParams(location.search);
-const __rvTok = String(window.CF_GUEST_TOKEN || __rvQS.get('review') || '').trim();
+/* short route: #/r/<token>[?api=…] — checked before the legacy ?review= form */
+const __rvHash = (location.hash || '').match(/^#\/r\/([A-Za-z0-9]{8,40})(?:\?(.*))?$/);
+if(__rvHash && __rvHash[2]){
+  const hq = new URLSearchParams(__rvHash[2]);
+  if(hq.get('api')) __rvQS.set('api', hq.get('api'));
+}
+const __rvTok = String(window.CF_GUEST_TOKEN || (__rvHash && __rvHash[1]) || __rvQS.get('review') || '').trim();
 window.__cfOpenTask = String(window.CF_OPEN_TASK || __rvQS.get('task') || '').trim();
 if(__rvTok){
   if(__rvQS.get('api')) state.url = cleanUrl_(__rvQS.get('api').trim());
@@ -2383,8 +2538,10 @@ if(__rvTok){
  ['reportPeriod', v => (reportPeriod = v), () => reportPeriod],
  ['rv', v => (rv = v), () => rv],
  ['bulkRows', v => (bulkRows = v), () => bulkRows],
+ ['reportScope', v => (reportScope = v), () => reportScope],
+ ['teamStats', v => (teamStats = v), () => teamStats],
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, allTeamsHtml, scopeSwitchHtml, canSeeAllTeams, periodDays_ });
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, driveWhoAmI_, ensureStudioAccount_, loadGsi, driveToken, gFetch, ensureFolder_, driveFolder, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });

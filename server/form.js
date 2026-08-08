@@ -33,7 +33,7 @@ function syncFormAssignees() {
   if (!editUrl) return;
   try {
     const form = FormApp.openByUrl(editUrl);
-    const names = roster_().filter(m => m.active && m.name.indexOf('Sample') !== 0).map(m => m.name + ' — ' + m.team);
+    const names = roster_().filter(m => m.active && m.role !== 'Assigner' && m.name.indexOf('Sample') !== 0).map(m => m.name + ' — ' + m.team);
     const items = form.getItems(FormApp.ItemType.LIST);
     items.forEach(it => {
       if (it.getTitle() === F_ASSIGN) {

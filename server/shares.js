@@ -22,9 +22,12 @@ function apiCreateShare_(user, req) {
   if (t.err) return t.err;
   if (!t.own) return { ok: false, error: 'FORBIDDEN', message: 'Only the team head, super admin or the task\'s requester can create share links.' };
   const mode = (String(req.mode) === 'comment') ? 'comment' : 'view';
+  /* 12 chars of a 54-char alphabet ≈ 10^20 combinations — unguessable, and
+     short enough that the whole share link fits in a message. Older 26-char
+     tokens keep working; only newly minted ones are short. */
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let token = '';
-  for (let i = 0; i < 26; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 12; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
   sharesSheet_().appendRow([token, taskId, mode, user.name, new Date(), '']);
   log_('share-create', taskId, user.email, mode, true);
   return { ok: true, token: token, mode: mode };

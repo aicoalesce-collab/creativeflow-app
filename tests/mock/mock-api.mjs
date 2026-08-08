@@ -571,7 +571,7 @@ function createShare(u, req) {
   const mode = String(req.mode) === 'comment' ? 'comment' : 'view';
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let token = '';
-  for (let i = 0; i < 26; i++) token += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 12; i++) token += chars[Math.floor(Math.random() * chars.length)];
   state.shares.push({ token, taskId: a.t.id, mode, createdBy: u.name, created: nowIso(), revoked: false });
   return { ok: true, token, mode };
 }
@@ -608,8 +608,13 @@ function guestComment(req) {
   const text = String(req.text || '').trim().slice(0, 2000);
   if (name.length < 2) return { ok: false, error: 'VALIDATION', message: 'Enter your name first.' };
   if (!text) return { ok: false, error: 'VALIDATION', message: 'Write something first.' };
+  const type = ['comment', 'marker', 'pin'].includes(String(req.type || 'comment')) ? String(req.type || 'comment') : 'comment';
   const t = byId(s.taskId);
-  const item = { id: 'RV-' + String(state.nextReview++).padStart(5, '0'), taskId: s.taskId, type: 'comment', tc: null, x: null, y: null, author: name, guest: true, text, status: '', created: nowIso(), version: latestVersionOf(s.taskId) };
+  const item = { id: 'RV-' + String(state.nextReview++).padStart(5, '0'), taskId: s.taskId, type,
+    tc: type === 'marker' && req.tc != null ? Number(req.tc) : null,
+    x: type === 'pin' && req.x != null ? Number(req.x) : null,
+    y: type === 'pin' && req.y != null ? Number(req.y) : null,
+    author: name, guest: true, text, status: type === 'comment' ? '' : 'Open', created: nowIso(), version: latestVersionOf(s.taskId) };
   state.reviews.push(item);
   if (t) mail([emailByName(t.assignee), ...headsOf(t.team).map(h => h.email)].join(','), '[Task] 💬 Client comment on ' + s.taskId, 'guest-comment', '');
   return { ok: true, item };
@@ -627,6 +632,40 @@ function route(req) {
     bootstrap: () => bootstrap(u, req),
     tasks: () => ({ ok: true, tasks: scoped(u), serverTime: nowIso(), __big: true }),
     tasksPage: () => tasksPage(u, req),
+    teamStats: () => {
+      if (!['Team Head', 'Super Admin'].includes(u.role)) return { ok: false, error: 'FORBIDDEN', message: 'Team-wide reports are for team heads and admins.' };
+      const days = Math.min(3650, Math.max(1, Math.floor(Number(req.days) || 30)));
+      const from = Date.now() - days * 86400000;
+      const blank = (name, team) => ({ name, team: team || '', open: 0, overdue: 0, inReview: 0, done: 0, rejected: 0, onTime: 0, closedWithDue: 0, rounds: 0, roundsTasks: 0, turnaroundDays: 0, turnaroundTasks: 0 });
+      const byTeam = {}; TEAMS.forEach(t => byTeam[t.team] = blank(t.team, t.team));
+      const people = state.roster.filter(m => m.active && m.role !== 'Super Admin' && m.role !== 'Assigner');
+      const byPerson = {}; people.forEach(m => byPerson[m.name] = blank(m.name, m.team));
+      const now = Date.now();
+      state.tasks.forEach(t => {
+        const closed = t.status === 'Done' || t.status === 'Rejected';
+        const completed = t.completed ? Date.parse(t.completed) : null;
+        const started = t.startedAt ? Date.parse(t.startedAt) : null;
+        [byTeam[t.team], byPerson[t.assignee]].filter(Boolean).forEach(b => {
+          if (!closed) {
+            b.open++;
+            if (t.status === 'In Review') b.inReview++;
+            else if (t.status !== 'On Hold' && t.dueMs < now) b.overdue++;
+          }
+          if (completed && completed >= from) {
+            if (t.status === 'Done') b.done++;
+            b.rounds += t.revisions || 0; b.roundsTasks++;
+            b.closedWithDue++; if (completed <= t.dueMs) b.onTime++;
+            if (started) { b.turnaroundDays += (completed - started) / 86400000; b.turnaroundTasks++; }
+          }
+          if (t.status === 'Rejected' && completed && completed >= from) b.rejected++;
+        });
+      });
+      const fin = b => ({ name: b.name, team: b.team, open: b.open, overdue: b.overdue, inReview: b.inReview, done: b.done, rejected: b.rejected,
+        onTimePct: b.closedWithDue ? Math.round(b.onTime / b.closedWithDue * 100) : null,
+        avgRounds: b.roundsTasks ? Math.round(b.rounds / b.roundsTasks * 10) / 10 : null,
+        avgTurnaroundDays: b.turnaroundTasks ? Math.round(b.turnaroundDays / b.turnaroundTasks * 10) / 10 : null });
+      return { ok: true, days, teams: TEAMS.map(t => fin(byTeam[t.team])), people: people.map(m => fin(byPerson[m.name])).filter(p => p.open || p.done || p.rejected), serverTime: nowIso() };
+    },
     taskDetail: () => {
       const t = scopedFull(u).find(x => x.id === String(req.id || '').trim());
       return t ? { ok: true, task: t } : { ok: false, error: 'NOT_FOUND', message: 'Task ' + req.id + ' was not found in your scope.' };

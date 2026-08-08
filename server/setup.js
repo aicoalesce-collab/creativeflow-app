@@ -174,8 +174,10 @@ function buildRoster_(ss) {
   sh.setFrozenRows(1);
   sh.setColumnWidths(1, 7, 190);
   const teamsRange = ss.getSheetByName(SHEETS.CONFIG).getRange('E2:E11');
+  /* v5: Assigners are common to both teams — Team may be left blank for them,
+     so the validation must warn rather than reject. */
   sh.getRange('C2:C200').setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInRange(teamsRange, true).setAllowInvalid(false).build());
+    SpreadsheetApp.newDataValidation().requireValueInRange(teamsRange, true).setAllowInvalid(true).build());
   // v5: Assigner is in the Role list from day one (old sheets needed migrate45_)
   sh.getRange('D2:D200').setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(ROLES, true).setAllowInvalid(false).build());

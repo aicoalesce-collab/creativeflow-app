@@ -213,6 +213,10 @@ function apiGuestReview_(req) {
   };
 }
 
+/** Guest contributions. A comment-mode link may also place PINS on an image and
+ *  MARKERS at a video timecode — the client asked for real annotation, not just
+ *  a text box. Guests can only ADD: resolving, deleting and sending changes stay
+ *  with the studio. */
 function apiGuestComment_(req) {
   const share = shareByToken_(String(req.token || '').trim());
   if (!share) return { ok: false, error: 'AUTH', message: 'This review link is invalid or has been revoked.' };
@@ -221,8 +225,14 @@ function apiGuestComment_(req) {
   const text = String(req.text || '').trim().slice(0, 2000);
   if (name.length < 2) return { ok: false, error: 'VALIDATION', message: 'Enter your name first.' };
   if (!text) return { ok: false, error: 'VALIDATION', message: 'Write something first.' };
+  const type = ['comment', 'marker', 'pin'].indexOf(String(req.type || 'comment')) > -1 ? String(req.type || 'comment') : 'comment';
   const id = nextReviewId_();
-  const rowVals = [id, share.taskId, 'comment', '', '', '', name, 'Yes', text, '', new Date(), '', '', latestVersionOf_(share.taskId)];
+  const rowVals = [id, share.taskId, type,
+    (type === 'marker' && req.tc != null) ? Number(req.tc) : '',
+    (type === 'pin' && req.x != null) ? Number(req.x) : '',
+    (type === 'pin' && req.y != null) ? Number(req.y) : '',
+    name, 'Yes', text, (type === 'comment') ? '' : 'Open', new Date(), '', '',
+    Number(req.version) || latestVersionOf_(share.taskId)];
   reviewsSheet_().appendRow(rowVals);
   const master = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.MASTER);
   const row = rowById_(master, share.taskId);
@@ -232,7 +242,7 @@ function apiGuestComment_(req) {
     const to = [emailByName_(String(cur[COL.ASSIGNEE - 1]).trim())]
       .concat(headsOf_(team).map(function (h) { return h.email; }))
       .filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(',');
-    if (to) safeSend_(to, '[Task] 💬 Client comment on ' + share.taskId,
+    if (to) safeSend_(to, '[Task] 💬 Client ' + (type === 'comment' ? 'comment' : 'change marker') + ' on ' + share.taskId,
       baseCard_('#eb5b2d', 'Guest comment · ' + share.taskId,
         '<p><b>' + esc_(name) + '</b> (via share link) commented on “' + esc_(String(cur[COL.TITLE - 1])) + '”:</p><p style="background:#f4f4f0;border-radius:8px;padding:10px 12px">' + esc_(text) + '</p>'), '', 'guest-comment');
   }

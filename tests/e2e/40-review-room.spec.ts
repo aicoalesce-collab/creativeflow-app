@@ -115,7 +115,7 @@ test.describe('review room + guests', () => {
     await login(page, USERS.headG);
     const H = { email: USERS.headG.email, code: USERS.headG.code };
     const s = await call(page, { action: 'createShare', taskId: 'GD-0004', mode: 'comment', ...H });
-    expect(s.token).toHaveLength(26);
+    expect(s.token).toHaveLength(12);   // shortened deliberately (see 45-share-links)
 
     const g = await call(page, { action: 'guestReview', token: s.token });
     expect(g.ok).toBe(true);
@@ -146,10 +146,10 @@ test.describe('review room + guests', () => {
     expect(guest.guest).toBe(true);
   });
 
-  test('share URL points at the hosted app on https, not ?page=app', async ({ page }) => {
+  test('share URL uses the short review route on its own origin', async ({ page }) => {
     await login(page, USERS.headG);
     const u = await page.evaluate(() => (window as any).shareUrl('TOKENTOKENTOKENTOKENTOKEN1'));
-    // on http://127.0.0.1 preview it must fall back to the server-served form
-    expect(u).toContain('review=TOKENTOKENTOKENTOKENTOKEN1');
+    // a hosted copy of the app serves the review route from its own origin
+    expect(u).toContain('#/r/TOKENTOKENTOKENTOKENTOKEN1');
   });
 });
