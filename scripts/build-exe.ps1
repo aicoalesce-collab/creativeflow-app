@@ -1,4 +1,4 @@
-# Builds the Windows desktop wrapper natively (no mingw, no cross-compile).
+﻿# Builds the Windows desktop wrapper natively (no mingw, no cross-compile).
 # Prereqs: Go (winget GoLang.Go) and go-winres (go install github.com/tc-hib/go-winres@latest)
 param([string]$Version = '5.0.0')
 $ErrorActionPreference = 'Stop'

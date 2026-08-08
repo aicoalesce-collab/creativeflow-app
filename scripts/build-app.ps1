@@ -1,4 +1,4 @@
-# Builds the client ONCE and distributes the same artifact to all three
+﻿# Builds the client ONCE and distributes the same artifact to all three
 # channels: the hosted PWA (web/dist), the Apps Script ?page=app fallback
 # (server/app.html) and the exe's embedded copy (exe/app/index.html).
 # One artifact, three channels — they can never drift.

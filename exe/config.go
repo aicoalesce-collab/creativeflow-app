@@ -9,7 +9,7 @@ import "os"
 
 // The studio's production /exec. Stamped by scripts/bake-url.ps1 at release
 // time once the pinned PROD deployment exists; CF_API_URL overrides for tests.
-const bakedAPI = "https://script.google.com/macros/s/PROD_DEPLOYMENT_ID_HERE/exec"
+const bakedAPI = "https://script.google.com/macros/s/AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl/exec"
 
 func envOr(k, def string) string {
 	if v := os.Getenv(k); v != "" {

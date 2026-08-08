@@ -1,4 +1,4 @@
-# Git is the source of truth for the Apps Script project. If someone edits the
+﻿# Git is the source of truth for the Apps Script project. If someone edits the
 # code in the Apps Script editor, the next clasp push silently overwrites it —
 # so we detect that BEFORE deploying and stop.
 $ErrorActionPreference = 'Stop'

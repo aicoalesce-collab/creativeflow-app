@@ -1,4 +1,4 @@
-# The ONLY sanctioned way to ship server code.
+﻿# The ONLY sanctioned way to ship server code.
 #
 # Hard rule: `clasp deploy` is NEVER run without -i <deploymentId>. A bare
 # deploy mints a NEW /exec URL and every client on earth points at a corpse —

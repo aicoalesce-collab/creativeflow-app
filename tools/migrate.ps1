@@ -1,4 +1,4 @@
-# One command migrates the OLD sheet into the new one.
+﻿# One command migrates the OLD sheet into the new one.
 #
 # The work is paginated server-side (<=500 rows per call) so the 6-minute
 # Apps Script execution ceiling can never kill it; this script just drives
