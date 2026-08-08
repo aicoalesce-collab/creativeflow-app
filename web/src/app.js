@@ -1,4 +1,7 @@
 'use strict';
+import { pushEnable, pushDisable, pushState, pushResync, pushSupport } from './push.js';
+import { logList, logMarkSeen, logClear, logAdd } from './notiflog.js';
+
 /* ═══════════ CONSTANTS / STATE ═══════════ */
 const PRIORITIES = ['Urgent','High','Medium','Low'];
 const STATUSES = ['New','In Progress','In Review','Revisions','Done','On Hold'];
@@ -40,6 +43,7 @@ const state = {
   code: store.get('cf_code') || store.get('td_code') || '',
   me: null, org: '', teams: [], roster: [], tasks: [], formUrl: '', sheetUrl: '',
   lastSync: null, googleClientId: '', googleApiKey: '', browserLogin: false, uploadMode: '', storageAccount: '', latestVersion: '',
+  vapidKey: '', pushOn: false, pushWhy: '',
 };
 let tab = 'overview';
 let weekOffset = 0;
@@ -359,6 +363,7 @@ function absorbPing_(j){
   state.org = j.org || state.org; state.googleClientId = j.googleClientId || '';
   state.googleApiKey = j.googleApiKey || ''; state.uploadMode = j.uploadMode || '';
   state.storageAccount = j.storageAccount || ''; state.latestVersion = j.appVersion || '';
+  state.vapidKey = j.vapidKey || '';
   return true;
 }
 
@@ -578,11 +583,80 @@ function enterApp(){
   weekOffset = ([0,6].indexOf(new Date().getDay())!==-1) ? 1 : 0;
   renderAll();
   saveCache_();
+  refreshPushState_();
+  refreshNotifLog_();
+  openTaskFromRoute_();     // arrived here by tapping a notification?
 }
+
+/* ═══════════ PUSH NOTIFICATIONS ═══════════ */
+
+/** Reads the real state of this device and re-paints the account panel. Also
+ *  re-registers a subscription the browser rotated behind our back — that
+ *  failure is otherwise completely silent. */
+async function refreshPushState_(){
+  try{
+    const st = await pushState();
+    state.pushOn = st.on;
+    state.pushWhy = st.supported ? '' : st.why;
+    if(st.on) pushResync(api, state.vapidKey);
+    renderTop();
+  }catch(e){}
+}
+
+async function togglePush(btn){
+  const label = state.pushOn;
+  if(btn){ btn.disabled = true; btn.innerHTML = label ? 'Turning off…' : 'Turning on…'; }
+  try{
+    if(label){
+      await pushDisable(api);
+      state.pushOn = false;
+      toast('Notifications are off on this device.');
+    }else{
+      await pushEnable(api, state.vapidKey);
+      state.pushOn = true;
+      state.pushWhy = '';
+      toast('Notifications are on. You\'ll be told the moment something needs you.');
+    }
+  }catch(err){
+    state.pushWhy = err && err.message ? err.message : String(err);
+    toast(esc(state.pushWhy), true);
+  }
+  if(btn) btn.disabled = false;
+  renderTop();
+}
+
+/* The service worker talks back: a tapped notification asks us to open its
+   task, and a rotated subscription asks us to re-register it. */
+if(typeof navigator !== 'undefined' && navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener('message', ev => {
+    const d = ev.data || {};
+    if(d.type === 'CF_OPEN' && d.taskId){
+      if(state.me) openTaskModal(d.taskId);
+      else store.set('cf_open_task', d.taskId);   // opened from a cold start
+    }
+    if(d.type === 'CF_PUSH_RESUBSCRIBE') pushResync(api, state.vapidKey);
+    if(d.type === 'CF_NOTIF' && d.entry){ logAdd(d.entry).then(refreshNotifLog_); }
+  });
+}
+
+/** #/t/<id> — where a tapped notification lands when the app was closed. */
+function openTaskFromRoute_(){
+  const m = (location.hash || '').match(/^#\/t\/([A-Za-z]{2}-\d{3,})$/);
+  const pending = store.get('cf_open_task');
+  const id = (m && m[1]) || pending || '';
+  if(!id) return;
+  store.del('cf_open_task');
+  if(state.tasks.some(t => t.id === id)) openTaskModal(id);
+}
+
 function logout(){
   store.del('cf_code'); store.del('td_code'); state.code=''; state.me=null;
   clearCache_();            /* the board must not survive a sign-out */
   state.tasks = [];
+  /* The subscription is per-device, not per-person: leaving it behind would
+     send the next person to sign in the previous one's notifications. */
+  pushDisable(api).catch(()=>{});
+  state.pushOn = false;
   showLogin();
 }
 
@@ -630,15 +704,20 @@ function renderTop(){
   $('#view-sub').textContent = scopeName+' · '+new Date().toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
   $('#userchip').innerHTML = av(state.me.name,32)+`<span><div class="un">${esc(state.me.name)}</div><span class="role-pill">${esc(roleLabel(state.me))}</span></span>`;
   $('#org-sub').textContent = state.org;
-  const ns = notifs();
-  $('#bell-count').textContent = ns.length || '';
-  $('#bell-count').style.display = ns.length? 'block':'none';
+  /* The badge counts UNREAD arrivals, not standing attention items. Once the
+     bell has been opened it goes quiet even though the overdue list is still
+     there — otherwise the number never clears and stops meaning anything. */
+  const unread = notifUnread_;
+  $('#bell-count').textContent = unread || '';
+  $('#bell-count').style.display = unread ? 'block':'none';
   const acctHtml = `Signed in as <b>${esc(state.me.name)}</b><br><span style="color:var(--muted)">${esc(state.me.email)}</span>
     <div class="links">
       ${state.formUrl? `<a href="${esc(state.formUrl)}" target="_blank" rel="noopener">📝 Task request form</a>`:''}
       ${(isAdmin()||isHead()) && state.sheetUrl? `<a href="${esc(state.sheetUrl)}" target="_blank" rel="noopener">📄 Master sheet</a>`:''}
     </div>
     <div class="out"><button onclick="refreshTasks()">↻ Refresh</button><button onclick="logout()">Sign out</button></div>
+    <div class="out" style="margin-top:7px"><button id="push-btn" onclick="togglePush(this)" title="Get a notification on this device the moment something needs you">${state.pushOn ? '🔔 Notifications: <b>ON</b>' : '🔕 Notifications: <b>OFF</b>'}</button></div>
+    ${state.pushWhy ? `<div style="margin-top:6px;font-size:10.5px;color:var(--muted);line-height:1.6">${esc(state.pushWhy)}</div>` : ''}
     <div class="out" style="margin-top:7px"><button onclick="toggleAutoUpdate()" title="Install new versions automatically at sign-in">⟳ Auto-update: <b>${autoUpdateOn()?'ON':'OFF'}</b></button></div>
     <div style="margin-top:8px;font-size:10px;color:var(--muted);letter-spacing:.08em">CREATIVEFLOW v${APP_VERSION}${updateAvailable() ? ' · <a href="#" style="color:var(--accent);font-weight:700" onclick="installLatest();return false;">v'+esc(state.latestVersion)+' available — Update now</a>' : ''}</div>`;
   $('#acct').innerHTML = acctHtml;
@@ -676,11 +755,88 @@ function bindNotifClicks(root, ns){
     if(n && n.t) openTaskModal(n.t.id);
   });
 }
+/* ── the received-notification log ─────────────────────────────────────────
+   What ACTUALLY arrived on this device, written by the service worker even
+   while the app was closed. Sits above the derived "needs attention" list,
+   which stays because it is stateful — an overdue task is still overdue
+   whether or not you read the notification about it. */
+let notifLog_ = [];
+let notifUnread_ = 0;
+
+/* test seam: lets the suite put an arrival in the log without a push service.
+   Thin on purpose — it writes through the same store the worker uses. */
+function logAddForTest(entry){ return logAdd(entry); }
+
+async function refreshNotifLog_(){
+  try{
+    notifLog_ = await logList();
+    notifUnread_ = notifLog_.filter(n => !n.seen).length;
+    renderTop();
+  }catch(e){}
+}
+
+const NOTIF_ICON = { assigned:'🆕', changes:'🔁', done:'✅', review:'👁', overdue:'🚨',
+                     comment:'💬', rejected:'✗', 'due-soon':'◷', brief:'✍️', update:'⟳', test:'🔔' };
+
+function notifWhen_(iso){
+  const d = iso ? new Date(iso) : null;
+  if(!d || isNaN(d)) return '';
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins + ' min ago';
+  if(mins < 1440) return Math.round(mins/60) + 'h ago';
+  return fmtD(d);
+}
+
+function logItemsHtml_(){
+  if(!notifLog_.length) return '';
+  return `<div class="nh" style="display:flex;align-items:center;gap:8px">Received
+      <span style="color:var(--muted);font-weight:400">· ${notifLog_.length}</span>
+      <button style="margin-left:auto;font-size:10px;color:var(--muted);text-decoration:underline" onclick="clearNotifLog_()">Clear</button>
+    </div>` +
+    notifLog_.map((n,i)=>`<div class="notif-item ${n.seen?'':'hot'}" data-nl="${i}">
+      <span class="ni">${NOTIF_ICON[n.kind] || '🔔'}</span>
+      <span style="flex:1"><b>${esc(n.title)}</b><br>${esc(n.body)}<div class="nt">${notifWhen_(n.at)}${n.seen?'':' · new'}</div></span>
+      ${n.seen?'':'<span class="dot"></span>'}</div>`).join('');
+}
+
+async function clearNotifLog_(){
+  await logClear();
+  notifLog_ = []; notifUnread_ = 0;
+  renderNotifPanel(); renderTop();
+}
+
 function renderNotifPanel(){
   const ns = notifs();
   const p = $('#notif-panel');
-  p.innerHTML = `<div class="nh">Notifications · ${ns.length}</div>` + notifItemsHtml(ns);
+  p.innerHTML = logItemsHtml_() +
+    `<div class="nh">${notifLog_.length ? 'Needs attention' : 'Notifications'} · ${ns.length}</div>` +
+    notifItemsHtml(ns);
   bindNotifClicks(p, ns);
+  /* a logged notification opens its task too */
+  p.querySelectorAll('.notif-item[data-nl]').forEach(el => el.onclick = () => {
+    const n = notifLog_[+el.dataset.nl];
+    $('#notif-panel').classList.remove('open');
+    if(n && n.taskId && state.tasks.some(t => t.id === n.taskId)) openTaskModal(n.taskId);
+  });
+}
+
+/** Opening the bell is what marks things read — that is the "if seen, close"
+ *  behaviour: the badge clears, the entries stay readable until cleared. */
+async function openNotifPanel_(){
+  const p = $('#notif-panel');
+  const opening = !p.classList.contains('open');
+  p.classList.toggle('open');
+  if(!opening) return;
+  renderNotifPanel();
+  if(notifUnread_){
+    await logMarkSeen();
+    notifLog_ = notifLog_.map(n => ({ ...n, seen: true }));
+    notifUnread_ = 0;
+    renderTop();
+    /* repaint so the "new" flags drop away while the panel is still open */
+    setTimeout(() => { if(p.classList.contains('open')) renderNotifPanel(); }, 1500);
+  }
 }
 
 /* ═══════════ VIEWS ═══════════ */
@@ -2423,7 +2579,7 @@ $('#newtask-btn').onclick = openNewTaskModal;
 $('#bulk-btn').onclick = openBulkModal;
 $('#refresh-btn').onclick = ()=>refreshTasks();
 $('#theme-btn').onclick = ()=>{ applyTheme(dark()?'light':'dark'); renderAll(); };
-$('#bell').onclick = e => { e.stopPropagation(); $('#notif-panel').classList.toggle('open'); };
+$('#bell').onclick = e => { e.stopPropagation(); openNotifPanel_(); };
 document.addEventListener('click', e => {
   if(!e.target.closest('#notif-panel') && !e.target.closest('#bell')) $('#notif-panel').classList.remove('open');
   if(!e.target.closest('#acct-sheet') && !e.target.closest('#userchip')) $('#acct-sheet').classList.remove('open');
@@ -2509,5 +2665,5 @@ if(__rvTok){
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_ });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest });
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });

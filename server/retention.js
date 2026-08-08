@@ -22,6 +22,7 @@ function retentionSweep() {
   try { retentionSweepBody_(); }
   catch (e) { log_('retention', '', '', String(e), false); }
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 /** Closed = safe to expire. Unknown/missing task = closed (it was archived). */

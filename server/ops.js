@@ -63,6 +63,7 @@ function selfCheck() {
     log_('selfcheck', '', '', 'fetchOk=' + fetchOk + ' clientRecent=' + clientRecent, true);
   } catch (e) { log_('selfcheck', '', '', String(e), false); }
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 /** Called from apiPing_ traffic — cheap passive heartbeat.

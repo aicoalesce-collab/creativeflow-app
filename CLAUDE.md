@@ -78,6 +78,41 @@ Created 2026-08-08 with `clasp create-script --type sheets`. NOTE: clasp
 overwrites `appsscript.json` on create — the real manifest (Asia/Calcutta,
 webapp executeAs/access, oauthScopes) is in git; re-push if it ever resets.
 
+## Push notifications (v5.3)
+
+Real OS notifications on Windows and Android, with the app closed, sent
+straight from Apps Script — no Firebase, no third-party service. Full detail in
+`docs/NOTIFICATIONS.md`. Things that will bite you:
+
+- Apps Script has no ECDSA, ECDH or AES, so `server/p256.js` and
+  `server/aesgcm.js` implement them on BigInt. **Do not touch those without
+  re-running `node tests/unit/crypto.test.mjs`** — wrong curve code still
+  produces plausible-looking bytes and fails only much later, as notifications
+  that quietly never arrive. They also require the V8 runtime; Rhino has no
+  BigInt.
+- **Never rotate the VAPID keypair.** Every existing device goes silent with no
+  error anywhere. It lives in Script Properties, never the Config sheet — an
+  earlier system here leaked a secret that way.
+- `PUSH_LEVEL=all` while `EMAIL_LEVEL=balanced` — chatty push, quiet inbox.
+  Push is free; the Gmail account can send ~100/day and once burned that in
+  minutes.
+- A function called only from an inline `onclick` MUST appear in the
+  `Object.assign(window, ...)` list, or Vite tree-shakes it — and everything it
+  imports — straight out of the bundle. `scripts/check-exports.mjs` now fails
+  the build on this; it is how the entire push client silently vanished once.
+- PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, so an em-dash in a comment
+  breaks parsing with an error pointing somewhere else entirely.
+  `scripts/check-encoding.mjs` guards it.
+- `/exec` keeps serving the PREVIOUS version for a short while after
+  `update-deployment`, and caches CODE separately from app HTML — a brand-new
+  admin op can 404 while ping already reports the new version. The smoke check
+  and the release announcement both retry instead of trusting the first answer.
+
+**The desktop exe is retired** — the owner uses the installed PWA, which does
+everything the exe did and adds notifications, which it never had. Source and
+tests stay in the repo and still pass, as a fallback if Pages ever dies; it is
+simply no longer built or handed out as part of a release.
+
 ## What v5 adds beyond the old system
 
 - **Assigner sheet sync** (`server/extsync.js`, `docs/ASSIGNER-SHEETS.md`) —

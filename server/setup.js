@@ -33,13 +33,16 @@ function setup() {
   buildMaster_(ss);
   buildArchive_(ss);
   buildLog_(ss);
-  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_();
+  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_(); pushSheet_();
   buildTeamTabs_(ss);
   buildDashboard_(ss);
   rebuildMemberTabs();
 
   createOrLinkForm_(ss);
   installTriggers_();
+  /* Push keys are minted once and kept forever: rotating them silently kills
+     every existing subscription, so vapidEnsureKeys_ refuses to overwrite. */
+  try { vapidEnsureKeys_(false); } catch (e) { log_('vapid-keys', '', '', String(e), false); }
   removeDefaultSheet_(ss);
   orderSheets_(ss);
 
@@ -58,6 +61,7 @@ function setup() {
       linkRow_('Open the master sheet', ss.getUrl()) +
       (formUrl ? linkRow_('Task Request form', formUrl) : '')), '');
   flushMailQueue_();
+  flushPushQueue_();
   log_('setup', '', owner, 'setup complete v' + API_VERSION, true);
   const msg = 'SETUP COMPLETE. Sign in as ' + owner + ' with access code: ' + ownerCode +
     '  (also in the Roster tab, column G). Email is muted until go-live.';
@@ -135,6 +139,9 @@ function buildConfig_(ss) {
       ['APP_BASE_URL', '', 'The hosted app URL (GitHub Pages) — used in email deep links.'],
       ['EMAIL_MUTE', 'YES', 'YES = log every email instead of sending (testing / migration). Set NO to go live.'],
       ['EMAIL_LEVEL', 'balanced', 'How chatty: all | balanced | minimal. Balanced rolls chasers into one email per person per day.'],
+      ['PUSH_MUTE', 'YES', 'YES = log every notification instead of sending. Set NO to go live (mirrors EMAIL_MUTE).'],
+      ['PUSH_LEVEL', 'all', 'Push chattiness: all | balanced | minimal. A notification costs nothing, so all is the default.'],
+      ['PUSH_CONTACT', '', 'mailto: or https: contact for the push service (RFC 8292). Blank = the sheet owner.'],
       ['DRIVE_PURGE_DAYS', 60, 'Uploaded files are permanently deleted this many days after upload (frees storage). 0 = never.'],
       ['FORM_URL', '', 'Filled automatically — link to the Task Request form.'],
       ['FORM_EDIT_URL', '', 'Filled automatically — link to edit the form.'],
@@ -325,7 +332,7 @@ function applyProtections() {
   });
 
   // Whole-sheet protection for admin tabs and read-only mirrors
-  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS];
+  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS, SHEETS.PUSH];
   ss.getSheets().forEach(sh => {
     const n = sh.getName();
     if (lockSheets.indexOf(n) !== -1 || n.indexOf(MEMBER_TAB_PREFIX) === 0 || n.indexOf(TEAM_TAB_SUFFIX) !== -1) {

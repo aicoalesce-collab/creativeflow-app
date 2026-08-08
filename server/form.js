@@ -94,4 +94,5 @@ function handleFormSubmit(e) {
     lock.releaseLock();
   }
   flushMailQueue_();
+  flushPushQueue_();
 }

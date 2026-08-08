@@ -67,6 +67,8 @@ function routes_() {
     acceptBrief:   { lock: true, fn: apiAcceptBrief_ },
     uploadTicket:  { fn: apiUploadTicket_ },              // no lock: mints a Drive session, writes nothing
     uploadFinish:  { lock: true, fn: apiUploadFinish_ },
+    pushSubscribe:   { lock: true, fn: apiPushSubscribe_ },
+    pushUnsubscribe: { lock: true, fn: apiPushUnsubscribe_ },
     bulkCreate:    { lock: true, fn: apiBulkCreate_ },
     addReview:     { lock: true, fn: apiAddReview_ },
     resolveReview: { lock: true, fn: apiResolveReview_ },
@@ -101,7 +103,7 @@ function dispatch_(route, user, req) {
   // whose sheet writes already committed (flushMailQueue_ never throws).
   if (!route.lock) {
     try { return route.fn(user, req); }
-    finally { flushMailQueue_(); }
+    finally { flushMailQueue_(); flushPushQueue_(); }
   }
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -109,7 +111,10 @@ function dispatch_(route, user, req) {
     return route.fn(user, req);
   } finally {
     lock.releaseLock();
-    flushMailQueue_(); // emails go out AFTER the lock is released
+    // both go out AFTER the lock: a push round trip is no faster than SMTP,
+    // and holding the lock across either serialises every write in the studio
+    flushMailQueue_();
+    flushPushQueue_();
   }
 }
 
@@ -127,6 +132,9 @@ function apiPing_() {
     uploadMode: String(cfg_('UPLOAD_MODE', 'central')),
     storageAccount: String(cfg_('STORAGE_ACCOUNT', '')),
     emailMute: String(cfg_('EMAIL_MUTE', 'NO')).toUpperCase().indexOf('Y') === 0,
+    // the browser cannot subscribe to push without this; it is public by design
+    // (87 chars — ping stays comfortably inside the ping-sized rule)
+    vapidKey: vapidPublicKeyB64_(),
     serverTime: new Date().toISOString(),
   };
 }

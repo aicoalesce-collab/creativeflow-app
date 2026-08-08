@@ -173,6 +173,7 @@ function extSync() {
   catch (e) { log_('extsync', '', '', String(e), false); }
   finally { lock.releaseLock(); }
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 function extSyncBody_(force) {

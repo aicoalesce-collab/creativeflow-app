@@ -136,11 +136,50 @@ test.describe('screens', () => {
     expect(html).toMatch(/✗|error|title/i);
   });
 
-  test('notifications: bell count matches derived notifications', async ({ page }) => {
+  /* The badge counts UNREAD ARRIVALS, not standing attention items — it used to
+     show notifs().length, which could never reach zero while anything was
+     overdue, so the number stopped meaning anything. The derived list is still
+     in the panel; it just no longer drives the badge. */
+  test('the bell badge is quiet when nothing has arrived', async ({ page }) => {
     await login(page, USERS.admin);
-    const n = await page.evaluate(() => (window as any).notifs().length);
-    expect(n).toBeGreaterThan(0);
-    await expect(page.locator('#bell-count')).toHaveText(String(n));
+    const derived = await page.evaluate(() => (window as any).notifs().length);
+    expect(derived).toBeGreaterThan(0);                       // there IS standing work
+    await expect(page.locator('#bell-count')).toBeHidden();   // …but nothing new arrived
+  });
+
+  test('an arriving notification lights the bell, and opening it clears the badge', async ({ page }) => {
+    await login(page, USERS.admin);
+
+    // simulate what the service worker posts when a push lands
+    await page.evaluate(async () => {
+      const w = window as any;
+      await w.logAddForTest({ title: 'Changes requested', body: 'GD-0007 · Menu card', taskId: 'GD-0007', kind: 'changes', at: new Date().toISOString() });
+      await w.refreshNotifLog_();
+    });
+    await expect(page.locator('#bell-count')).toHaveText('1');
+
+    await page.click('#bell');
+    await expect(page.locator('#notif-panel')).toHaveClass(/open/);
+    await expect(page.locator('#notif-panel')).toContainText('Changes requested');
+    await expect(page.locator('#notif-panel')).toContainText('Needs attention');   // derived list still there
+    await expect(page.locator('#bell-count')).toBeHidden();                        // seen → quiet
+
+    // and it stays cleared after a re-render
+    await page.evaluate(() => (window as any).renderTop());
+    await expect(page.locator('#bell-count')).toBeHidden();
+  });
+
+  test('the received log can be cleared', async ({ page }) => {
+    await login(page, USERS.admin);
+    await page.evaluate(async () => {
+      const w = window as any;
+      await w.logAddForTest({ title: 'Task completed', body: 'GD-0009', taskId: 'GD-0009', kind: 'done', at: new Date().toISOString() });
+      await w.refreshNotifLog_();
+    });
+    await page.click('#bell');
+    await expect(page.locator('#notif-panel')).toContainText('Task completed');
+    await page.evaluate(() => (window as any).clearNotifLog_());
+    await expect(page.locator('#notif-panel')).not.toContainText('Task completed');
   });
 
   test('theme toggle flips and persists', async ({ page }) => {

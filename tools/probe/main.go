@@ -7,6 +7,7 @@
 //	probe ping   <execUrl> [-expect-v 5] [-expect-app 5.0.0]
 //	probe login  <execUrl> <email> <code>
 //	probe admin  <execUrl> <email> <code> <opJSON>
+//	probe call   <execUrl> <bodyJSON>   — any action, for one-off checks
 package main
 
 import (
@@ -60,7 +61,7 @@ func fail(format string, a ...any) {
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("usage: probe <ping|login|admin> <execUrl> [...]")
+		fmt.Println("usage: probe <ping|login|admin|call> <execUrl> [...]")
 		os.Exit(2)
 	}
 	cmd, url := os.Args[1], strings.TrimRight(os.Args[2], "/")
@@ -121,6 +122,26 @@ func main() {
 			fail("tasksPage is %d bytes (cap %d) — a monster row is inflating the page", n2, sizeCap)
 		}
 		fmt.Printf("ok    tasksPage       total=%v next=%v %d bytes\n", p["total"], p["next"], n2)
+
+	case "call":
+		// escape hatch: POST an arbitrary action body and print the answer.
+		// Fetch-style tools mangle /exec, so anything ad-hoc has to come through here.
+		if len(os.Args) < 4 {
+			fail("usage: probe call <execUrl> <bodyJSON>")
+		}
+		var body map[string]any
+		if err := json.Unmarshal([]byte(os.Args[3]), &body); err != nil {
+			fail("body is not JSON: %v", err)
+		}
+		j, n, err := post(url, body)
+		if err != nil {
+			fail("%v", err)
+		}
+		out, _ := json.MarshalIndent(j, "", "  ")
+		fmt.Printf("%s\n(%d bytes)\n", out, n)
+		if j["ok"] != true {
+			os.Exit(1)
+		}
 
 	case "admin":
 		if len(os.Args) < 6 {

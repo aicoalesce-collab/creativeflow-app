@@ -31,12 +31,14 @@ function digestRows_(list) {
 function dailyDigest() {
   dailyDigestBody_(false);
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 /** Menu / admin "send now" — bypasses the hour + already-sent guards. */
 function dailyDigestNow() {
   dailyDigestBody_(true);
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 function dailyDigestBody_(force) {

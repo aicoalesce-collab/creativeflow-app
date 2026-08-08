@@ -190,6 +190,7 @@ function apiCreate_(user, req) {
     safeSend_(to, '[Task] 🙋 New ' + team + ' task needs an assignee — ' + id,
       taskCard_(task, '#8e44ad', 'New task waiting for assignment',
         '<p><b>' + esc_(user.name) + '</b> added this from the dashboard. Assign it and the member is notified automatically.</p>'), '', 'needs-assignee');
+    to.split(',').forEach(function (em) { pushToEmail_(em.trim(), 'New ' + team + ' task needs an assignee', id + ' · ' + task.title, { taskId: id, kind: 'review' }); });
     info = 'sent to the ' + team + ' head for assignment';
   }
   log_('api-create', id, user.email, info, true);
@@ -286,6 +287,7 @@ function apiUpdate_(user, req) {
       if (aEmail && aEmail !== user.email) safeSend_(aEmail, '[Task] ✍️ Brief updated — ' + id,
         taskCard_(taskAt_(master, row), '#e67e22', 'The brief changed mid-work',
           '<p><b>' + esc_(user.name) + '</b> updated the brief after you started. Open the task and press <b>Accept updated brief</b> to continue — this keeps everyone honest about scope.</p>'), '', 'brief-updated');
+      pushToEmail_(aEmail, 'Brief changed mid-work', id + ' · ' + user.name + ' updated the brief', { taskId: id, kind: 'brief' });
       notes.push('brief flagged for re-accept');
     }
   }
@@ -383,6 +385,7 @@ function apiUpdate_(user, req) {
           if (heads) safeSend_(heads, '[Task] 🔎 QC check — ' + id + ': ' + task.title,
             taskCard_(task, '#5b5bd6', 'Quality-check this first',
               '<p><b>' + esc_(user.name) + '</b> finished this task. Open the review room, check it, then <b>✓ Pass QC</b> to send it to the requester — or send changes back.</p>' + roomBtn_(id)), '', 'qc-request');
+          heads.split(',').forEach(function (em) { pushToEmail_(em.trim(), 'Ready to QC', id + ' · ' + task.title, { taskId: id, kind: 'review', urgency: 'high' }); });
           notes.push('head asked to QC');
         } else {
           pingRequester_(master, row, team, user, task);
@@ -421,6 +424,7 @@ function apiRejectTask_(user, req) {
   if (to) safeSend_(to, '[Task] ✗ Rejected — ' + id + ': ' + task.title,
     taskCard_(task, '#c0392b', 'Task rejected',
       '<p><b>' + esc_(user.name) + '</b> rejected this task.</p><p style="background:#fdecea;border-radius:8px;padding:10px 12px"><b>Reason:</b> ' + esc_(reason) + '</p><p>The task stays in the sheet for the record — it does not count as Done.</p>'), '', 'rejected');
+    to.split(',').forEach(function (em) { pushToEmail_(em.trim(), 'Task rejected', id + ' · ' + reason.slice(0, 90), { taskId: id, kind: 'rejected', urgency: 'high' }); });
   log_('reject', id, user.email, reason.slice(0, 80), true);
   return { ok: true, task: taskToApi_(fullRow_(master, row)) };
 }

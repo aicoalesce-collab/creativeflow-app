@@ -1,4 +1,4 @@
-# Post-deploy smoke check. Uses probe.exe (a Go HTTP client) because
+﻿# Post-deploy smoke check. Uses probe.exe (a Go HTTP client) because
 # fetch-style tools lie about Apps Script /exec responses.
 param(
   [Parameter(Mandatory = $true)][string]$Url,
@@ -17,8 +17,20 @@ if (-not (Test-Path $probe)) {
 Write-Host "-- smoke $Url"
 $pingArgs = @('ping', $Url)
 if ($ExpectV) { $pingArgs += @('-expect-app', $ExpectV) }
-& $probe @pingArgs
-if ($LASTEXITCODE) { exit 1 }
+
+# Apps Script keeps serving the previous version for a few seconds after
+# update-deployment. Without a retry that shows up as "PROD SMOKE FAILED —
+# investigate immediately" on a perfectly good release, which is exactly the
+# kind of false alarm that gets a real one ignored later.
+$attempt = 0
+while ($true) {
+  $attempt++
+  & $probe @pingArgs
+  if (-not $LASTEXITCODE) { break }
+  if ($attempt -ge 5) { Write-Host "FAIL  version never caught up after $attempt attempts"; exit 1 }
+  Write-Host "      not serving $ExpectV yet — retrying ($attempt/5)"
+  Start-Sleep -Seconds 6
+}
 
 # Test Bot can log in but can never receive mail (@example.com guard), and
 # nothing it triggers emails a real person (actor guard in flushMailQueue_).

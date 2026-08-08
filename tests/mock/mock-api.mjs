@@ -94,7 +94,7 @@ function load() {
       versions[t.id].push({ v, link: t.deliverable, by: t.assignee || t.requester, at: t.created, fileId: (t.deliverable.match(/\/d\/([-\w]{20,})/) || [])[1] || '', expires: '' });
     }
   });
-  state = { roster, tasks, reviews, shares, versions, nextReview: 7 };
+  state = { roster, tasks, reviews, shares, versions, nextReview: 7, push: [] };
   outbox = [];
   mailQuotaLeft = MAIL_QUOTA;
   timedOutOnce = false;
@@ -176,7 +176,10 @@ function ping() {
     googleClientId: 'mock-client-id.apps.googleusercontent.com',
     googleApiKey: 'mock-api-key',
     uploadMode: 'central', storageAccount: 'studio@example.com',
-    emailMute: MUTE, serverTime: nowIso(),
+    emailMute: MUTE,
+    // an 87-char base64url P-256 point, same shape the real server sends
+    vapidKey: 'BKYhEkOFeEQuS3bu1ufpZtVdS7CQ1UhuN6aljaoCJiLSJLXKl4RN9QCtQb2aJ8B_TOEIORt-bh4VwFXaQ3UWfRs',
+    serverTime: nowIso(),
   };
 }
 
@@ -637,6 +640,29 @@ function guestDelete(req) {
   return { ok: true, deletedId: id };
 }
 
+
+/* ── push subscriptions ─────────────────────────────────────────────────── */
+function pushSubscribe(u, req) {
+  const endpoint = String(req.endpoint || '').trim();
+  if (!/^https:\/\//.test(endpoint)) return { ok: false, error: 'VALIDATION', message: 'That is not a push endpoint.' };
+  if (!req.p256dh || !req.auth) return { ok: false, error: 'VALIDATION', message: 'The subscription is missing its keys.' };
+  const i = state.push.findIndex(p => p.endpoint === endpoint);
+  const row = { endpoint, p256dh: String(req.p256dh), auth: String(req.auth), member: u.email, device: String(req.device || ''), active: true };
+  if (i === -1) state.push.push(row); else state.push[i] = row;   // same device must not duplicate
+  return { ok: true, subscribed: true };
+}
+function pushUnsubscribe(u, req) {
+  const endpoint = String(req.endpoint || '').trim();
+  const i = state.push.findIndex(p => p.endpoint === endpoint);
+  if (i > -1) {
+    if (state.push[i].member !== u.email && u.role !== 'Super Admin') {
+      return { ok: false, error: 'FORBIDDEN', message: 'That subscription belongs to another account.' };
+    }
+    state.push.splice(i, 1);
+  }
+  return { ok: true, subscribed: false };
+}
+
 /* ── router + HTTP plumbing ────────────────────────────────────────────── */
 
 function route(req) {
@@ -647,6 +673,8 @@ function route(req) {
   if (!u) return { ok: false, error: 'AUTH', message: 'Email or access code did not match the Roster.' };
   const AUTHED = {
     bootstrap: () => bootstrap(u, req),
+    pushSubscribe: () => pushSubscribe(u, req),
+    pushUnsubscribe: () => pushUnsubscribe(u, req),
     tasks: () => ({ ok: true, tasks: scoped(u), serverTime: nowIso(), __big: true }),
     tasksPage: () => tasksPage(u, req),
     teamStats: () => {
@@ -724,7 +752,7 @@ const server = http.createServer((rq, rs) => {
 
   // control endpoints
   if (url.pathname === '/__reset') { load(); return send(200, { ok: true, reset: true }); }
-  if (url.pathname === '/__state') return send(200, { tasks: state.tasks.length, reviews: state.reviews.length, shares: state.shares.length, mailQuotaLeft });
+  if (url.pathname === '/__state') return send(200, { tasks: state.tasks.length, reviews: state.reviews.length, shares: state.shares.length, push: state.push, mailQuotaLeft });
   if (url.pathname === '/__outbox') return send(200, outbox);
 
   let body = '';

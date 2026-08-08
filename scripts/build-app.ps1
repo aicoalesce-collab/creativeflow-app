@@ -6,6 +6,11 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 
 # a stale name in the window exposure list silently kills every click handler
+# a BOM-less .ps1 with an em-dash in it stops parsing on PowerShell 5.1
+node "$root\scripts\check-encoding.mjs"
+if ($LASTEXITCODE) { throw "check-encoding failed" }
+
+# a stale name in the window exposure list silently kills every click handler
 node "$root\scripts\check-exports.mjs"
 if ($LASTEXITCODE) { throw "check-exports failed" }
 

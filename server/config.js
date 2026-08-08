@@ -18,6 +18,7 @@ const SHEETS = {
   SHARES: 'Shares',
   CYCLES: 'Cycles',
   VERSIONS: 'Versions',
+  PUSH: 'Push Devices',   // hidden: rows are device credentials, not data to browse
 };
 const MEMBER_TAB_PREFIX = '👤 ';
 const TEAM_TAB_SUFFIX = ' Team';

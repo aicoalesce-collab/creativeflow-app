@@ -158,6 +158,13 @@ function notifyAssignee_(sheet, row, kind) {
     note = `<p>New deadline: <b>${task.dueStr || '—'}</b>.</p>`;
   }
   safeSend_(email, subject, taskCard_(task, color, headline, note), '', kind === 'assigned' ? 'assigned' : (kind === 'revision' ? 'revision' : 'reschedule'));
+  /* Push sits beside the email at every event, never instead of it — a phone
+     that has notifications switched off must still get the mail. */
+  pushToEmail_(email,
+    kind === 'assigned' ? 'New task for you' : kind === 'revision' ? 'Changes requested' : 'Deadline changed',
+    task.id + ' · ' + task.title + (task.dueStr ? ' — due ' + task.dueStr : ''),
+    { taskId: task.id, kind: kind === 'assigned' ? 'assigned' : (kind === 'revision' ? 'changes' : 'reschedule'),
+      urgency: kind === 'reschedule' ? 'normal' : 'high' });
   log_(kind, task.id, email, '', true);
 }
 
@@ -171,6 +178,10 @@ function notifyDone_(sheet, row) {
     taskCard_(task, '#27ae60', 'Task completed',
       `<p><b>${esc_(task.assignee)}</b> marked this task Done.` +
       (task.deliverable ? ` Deliverable: <a href="${escAttr_(task.deliverable)}">open link</a>.` : '') + '</p>'), '', 'done');
+  to.split(',').forEach(function (em) {
+    pushToEmail_(em.trim(), 'Task completed', task.id + ' · ' + task.title + ' — by ' + task.assignee,
+      { taskId: task.id, kind: 'done' });
+  });
   log_('done', task.id, to, '', true);
 }
 
@@ -182,6 +193,8 @@ function pingRequester_(master, row, team, user, task) {
     safeSend_(reqEmail, '[Task] 🎬 Your assignment is ready — ' + String(cur[COL.ID - 1]) + ': ' + task.title,
       taskCard_(task, '#5b5bd6', 'Here is your assignment — please review',
         '<p>The ' + esc_(team) + ' team finished <b>' + esc_(task.title) + '</b> and it passed the internal check. Watch it, drop comments or change markers exactly where they belong, and approve or ask for changes — the sooner you review, the sooner it ships.</p>' + roomBtn_(String(cur[COL.ID - 1]))), '');
+    pushToEmail_(reqEmail, 'Ready for your review',
+      String(cur[COL.ID - 1]) + ' · ' + task.title, { taskId: String(cur[COL.ID - 1]), kind: 'review', urgency: 'high' });
     return true;
   }
   return false;
@@ -198,4 +211,5 @@ function sendTestAlert() {
     taskCard_(demo, '#1a73e8', 'This is what task alerts look like',
       '<p>If you can read this, email notifications are working. Tip: create a Gmail filter for subject <b>[Task]</b> → label it, and switch ON phone notifications for that label in the Gmail app.</p>'), '', 'test');
   flushMailQueue_();
+  flushPushQueue_();
 }

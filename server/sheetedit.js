@@ -37,4 +37,5 @@ function handleEdit(e) {
     log_('edit-error', '', '', String(err), false);
   }
   flushMailQueue_();
+  flushPushQueue_();
 }

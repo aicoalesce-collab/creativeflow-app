@@ -57,6 +57,7 @@ function generateAccessCodes() {
         '<p>Keep it private — it identifies you and controls what you can edit.</p>'), '', 'codes');
   });
   flushMailQueue_();
+  flushPushQueue_();
   log_('codes', '', '', made + ' new codes minted', true);
   return made;
 }

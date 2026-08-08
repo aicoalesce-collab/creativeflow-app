@@ -33,6 +33,16 @@ function apiAdmin_(user, req) {
     case 'rosterUpsert':    return adminRosterUpsert_(user, req);
     case 'rosterRemove':    return adminRosterRemove_(user, req);
     case 'sendTestAlert':   sendTestAlert(); return { ok: true, result: 'test alert queued' };
+    /* Push: the crypto for these is hand-written (Apps Script has no ECDSA,
+       ECDH or AES), so it is verified against published RFC/NIST vectors on the
+       real runtime before anyone relies on it. */
+    case 'pushSelfTest':    return { ok: true, result: pushSelfTest_() };
+    case 'pushKeys':        return { ok: true, result: vapidEnsureKeys_(req.force === 'ROTATE-AND-BREAK-EVERY-DEVICE') };
+    case 'pushList':        return { ok: true, subs: pushListForAdmin_() };
+    case 'pushTest':        return { ok: true, result: pushTestSend_(user, req) };
+    /* Called by tools/deploy.ps1 after the prod smoke passes, so nobody sits on
+       a stale build without knowing a new one exists. */
+    case 'pushAppUpdate':   return { ok: true, result: pushAppUpdate_(String(req.version || '').trim() || latestAppVersion_()) };
     case 'archiveNow':      archiveDone(); return { ok: true, result: 'archive pass done' };
     case 'sweepNow':        sweep(); return { ok: true, result: 'sweep done' };
     case 'reviewSweepNow':  reviewSweep(); return { ok: true, result: 'review sweep done' };
@@ -90,10 +100,14 @@ function adminSetConfig_(req) {
   const ALLOWED = ['EMAIL_MUTE', 'EMAIL_LEVEL', 'APP_BASE_URL', 'DRIVE_EXPIRY_DAYS', 'DRIVE_PURGE_DAYS', 'ORG_NAME', 'DIGEST_HOUR', 'STORAGE_ACCOUNT', 'GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY',
     'DUE_SOON_HOURS', 'OVERDUE_REPEAT_HOURS', 'CC_HEAD_FROM_ALERT_N', 'AUTO_URGENT_ON_OVERDUE', 'EMAIL_ON_ASSIGNMENT',
     'NOTIFY_REQUESTER_ON_DONE', 'DAILY_DIGEST', 'ARCHIVE_AFTER_DAYS', 'MAX_ROUNDS', 'REVIEW_WINDOW_DAYS',
-    'SLOT_EVE', 'SLOT_NOON', 'CREATE_CUTOFF', 'WEEKLY_OFF', 'EXTRA_WORK_DATES', 'HOLIDAY_DATES', 'UPLOAD_MODE', 'DRIVE_EXPIRY_DAYS'];
+    'SLOT_EVE', 'SLOT_NOON', 'CREATE_CUTOFF', 'WEEKLY_OFF', 'EXTRA_WORK_DATES', 'HOLIDAY_DATES', 'UPLOAD_MODE', 'DRIVE_EXPIRY_DAYS',
+    'PUSH_LEVEL', 'PUSH_MUTE', 'PUSH_CONTACT'];
   if (ALLOWED.indexOf(key) === -1) return { ok: false, error: 'VALIDATION', message: 'Config key not settable remotely: ' + key };
   if (key === 'EMAIL_LEVEL' && ['all', 'balanced', 'minimal'].indexOf(String(val).toLowerCase()) === -1) {
     return { ok: false, error: 'VALIDATION', message: 'EMAIL_LEVEL must be all, balanced or minimal.' };
+  }
+  if (key === 'PUSH_LEVEL' && ['all', 'balanced', 'minimal'].indexOf(String(val).toLowerCase()) === -1) {
+    return { ok: false, error: 'VALIDATION', message: 'PUSH_LEVEL must be all, balanced or minimal.' };
   }
   cfgSet_(key, val);
   // the daily trigger bakes the hour at install time — changing it must reinstall

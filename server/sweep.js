@@ -9,6 +9,7 @@ function sweep() {
   try { sweepBody_(); }
   catch (e) { log_('sweep-error', '', '', String(e), false); }
   flushMailQueue_(); // always — stamped reminders must not lose their emails
+  flushPushQueue_();
 }
 
 function sweepBody_() {
@@ -40,6 +41,7 @@ function sweepBody_() {
           safeSend_(email, `[Task] ⏰ Due soon — ${id}: ${task.title}`,
             taskCard_(task, '#e67e22', 'This task is due soon',
               `<p>Deadline: <b>${fmtDT_(due)}</b>. Update the status in the sheet once it's moving.</p>`), '', 'due-soon-each');
+          pushToEmail_(email, 'Due soon', id + ' · ' + task.title + ' — ' + fmtDT_(due), { taskId: id, kind: 'due-soon', urgency: 'high' });
           master.getRange(row, COL.H_REMINDED).setValue(new Date());
           log_('due-soon', id, email, '', true);
         }
@@ -107,6 +109,11 @@ function sendOverdueRollups_(list) {
         '<p>These are past their deadline and take priority over everything else on your list.' +
         (cc ? ' Your team head is copied.' : '') + '</p>' +
         '<table style="border-collapse:collapse;font-size:13px;width:100%">' + rows + '</table>'), cc, 'overdue');
+    /* One push per person per sweep, not one per task — a phone showing nine
+       separate overdue banners is noise, and Topic collapses them anyway. */
+    pushToEmail_(to, n + ' overdue task' + (n > 1 ? 's' : ''),
+      items.slice(0, 3).map(function (x) { return x.task.id; }).join(', ') + (n > 3 ? ' and ' + (n - 3) + ' more' : ''),
+      { taskId: items[0].task.id, kind: 'overdue', topic: 'overdue', urgency: 'high' });
   });
 }
 
@@ -115,6 +122,7 @@ function sendOverdueRollups_(list) {
 function reviewSweep() {
   reviewSweepBody_();
   flushMailQueue_();
+  flushPushQueue_();
 }
 
 function reviewSweepBody_() {
