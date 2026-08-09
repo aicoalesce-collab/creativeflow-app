@@ -19,6 +19,7 @@ const SHEETS = {
   CYCLES: 'Cycles',
   VERSIONS: 'Versions',
   PUSH: 'Push Devices',   // hidden: rows are device credentials, not data to browse
+  PORTFOLIO: 'Portfolio', // finished work + its permanent still (gallery.js)
 };
 const MEMBER_TAB_PREFIX = '👤 ';
 const TEAM_TAB_SUFFIX = ' Team';

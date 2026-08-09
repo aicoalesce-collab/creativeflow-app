@@ -19,6 +19,7 @@ function handleEdit(e) {
       if (val === 'Done') {
         sh.getRange(row, COL.COMPLETED).setValue(new Date());
         if (yes_('NOTIFY_REQUESTER_ON_DONE')) notifyDone_(sh, row);
+        portfolioCapture_(sh, row);
       } else {
         if (e.oldValue === 'Done') sh.getRange(row, COL.COMPLETED).clearContent();
         if (val === 'Revisions') {

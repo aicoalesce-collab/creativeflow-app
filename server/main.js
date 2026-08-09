@@ -54,6 +54,7 @@ function routes_() {
     tasksPage:     { fn: apiTasksPage_ },
     taskDetail:    { fn: apiTaskDetail_ },
     teamStats:     { fn: apiTeamStats_ },
+    gallery:       { fn: apiGallery_ },
     listReview:    { fn: apiListReview_ },
     // authed writes (locked)
     createTask:    { lock: true, fn: function (u, q) { const cut = createCutoff_(u, q); if (cut) return cut; return apiCreate_(u, q); } },

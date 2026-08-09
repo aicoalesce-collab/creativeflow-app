@@ -33,7 +33,7 @@ function setup() {
   buildMaster_(ss);
   buildArchive_(ss);
   buildLog_(ss);
-  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_(); pushSheet_();
+  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_(); pushSheet_(); portfolioSheet_();
   buildTeamTabs_(ss);
   buildDashboard_(ss);
   rebuildMemberTabs();
@@ -332,7 +332,7 @@ function applyProtections() {
   });
 
   // Whole-sheet protection for admin tabs and read-only mirrors
-  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS, SHEETS.PUSH];
+  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS, SHEETS.PUSH, SHEETS.PORTFOLIO];
   ss.getSheets().forEach(sh => {
     const n = sh.getName();
     if (lockSheets.indexOf(n) !== -1 || n.indexOf(MEMBER_TAB_PREFIX) === 0 || n.indexOf(TEAM_TAB_SUFFIX) !== -1) {

@@ -663,7 +663,57 @@ function pushUnsubscribe(u, req) {
   return { ok: true, subscribed: false };
 }
 
-/* ── router + HTTP plumbing ────────────────────────────────────────────── */
+/* ── gallery / portfolio ────────────────────────────────────────────────
+   Mirrors server/gallery.js: a Done task with a deliverable becomes a
+   portfolio row, and scoping is enforced server-side because the row carries
+   a link to finished work. */
+const GALLERY_PAGE = 24;
+
+function portfolioRows() {
+  return state.tasks
+    .filter(t => t.status === 'Done' && t.deliverable)
+    .map(t => ({
+      id: t.id, title: t.title, team: t.team, assignee: t.assignee, requester: t.requester,
+      completed: t.completed || '',
+      // the mock has no Drive, so only tasks the fixtures marked as captured
+      // carry a "permanent still"; the rest fall back to the live link
+      thumb: /1MenuCard|1Standee/.test(t.deliverable) ? 'https://drive.google.com/thumbnail?id=mockstill&sz=w800' : '',
+      link: t.deliverable,
+      kind: /youtube|youtu\.be/.test(t.deliverable) ? 'yt'
+        : /\/d\/[-\w]{20,}/.test(t.deliverable) ? 'drive'
+        : /\.(png|jpe?g|gif|webp)(\?|#|$)/i.test(t.deliverable) ? 'img' : 'link',
+    }));
+}
+
+function gallery(u, req) {
+  const page = Math.max(0, Math.floor(Number(req.page) || 0));
+  const scope = String(req.scope || 'team');
+  const wantTeam = String(req.team || '').trim();
+
+  let rows = portfolioRows();
+  if (u.role === 'Super Admin') {
+    if (wantTeam) rows = rows.filter(r => r.team === wantTeam);
+    if (scope === 'mine') rows = rows.filter(r => r.assignee === u.name);
+  } else if (u.role === 'Team Head') {
+    rows = rows.filter(r => r.team === u.team);
+    if (scope === 'mine') rows = rows.filter(r => r.assignee === u.name);
+  } else if (u.role === 'Assigner') {
+    rows = rows.filter(r => r.requester === u.name);
+  } else {
+    rows = rows.filter(r => r.assignee === u.name);
+  }
+
+  rows.sort((a, b) => String(b.completed).localeCompare(String(a.completed)));
+  const total = rows.length;
+  return {
+    ok: true, total,
+    next: (page + 1) * GALLERY_PAGE < total ? page + 1 : null,
+    items: rows.slice(page * GALLERY_PAGE, page * GALLERY_PAGE + GALLERY_PAGE),
+  };
+}
+
+/* ── router + HTTP plumbing
+ ────────────────────────────────────────────── */
 
 function route(req) {
   const action = String(req.action || 'ping');
@@ -673,6 +723,7 @@ function route(req) {
   if (!u) return { ok: false, error: 'AUTH', message: 'Email or access code did not match the Roster.' };
   const AUTHED = {
     bootstrap: () => bootstrap(u, req),
+    gallery: () => gallery(u, req),
     pushSubscribe: () => pushSubscribe(u, req),
     pushUnsubscribe: () => pushUnsubscribe(u, req),
     tasks: () => ({ ok: true, tasks: scoped(u), serverTime: nowIso(), __big: true }),

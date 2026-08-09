@@ -50,6 +50,7 @@ function apiAdmin_(user, req) {
     case 'backupNow':       return { ok: true, result: weeklyBackupBody_() };
     case 'report':          return adminReport_();
     case 'mailAudit':       return adminMailAudit_(req);
+    case 'portfolioBackfill': return { ok: true, result: portfolioBackfill_(req) };
     case 'setConfig':       return adminSetConfig_(req);
     // migration (migrate.js)
     case 'migratePreflight': return migratePreflight_(req);

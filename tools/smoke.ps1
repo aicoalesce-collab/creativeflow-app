@@ -22,14 +22,17 @@ if ($ExpectV) { $pingArgs += @('-expect-app', $ExpectV) }
 # update-deployment. Without a retry that shows up as "PROD SMOKE FAILED —
 # investigate immediately" on a perfectly good release, which is exactly the
 # kind of false alarm that gets a real one ignored later.
+# Observed lag: staging flips within seconds, prod has taken over a minute.
+# 10 x 12s gives it two minutes before crying wolf.
 $attempt = 0
+$maxTries = 10
 while ($true) {
   $attempt++
   & $probe @pingArgs
   if (-not $LASTEXITCODE) { break }
-  if ($attempt -ge 5) { Write-Host "FAIL  version never caught up after $attempt attempts"; exit 1 }
-  Write-Host "      not serving $ExpectV yet — retrying ($attempt/5)"
-  Start-Sleep -Seconds 6
+  if ($attempt -ge $maxTries) { Write-Host "FAIL  version never caught up after $attempt attempts"; exit 1 }
+  Write-Host "      not serving $ExpectV yet - retrying ($attempt/$maxTries)"
+  Start-Sleep -Seconds 12
 }
 
 # Test Bot can log in but can never receive mail (@example.com guard), and

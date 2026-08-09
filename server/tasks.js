@@ -341,8 +341,10 @@ function apiUpdate_(user, req) {
       cycle_(id, 'approve', user.name, '');
       master.getRange(row, COL.COMPLETED).setValue(new Date());
       if (yes_('NOTIFY_REQUESTER_ON_DONE')) { notifyDone_(master, row); notes.push('requester + head notified'); }
+      portfolioCapture_(master, row);   // grab the still while the file is alive
     } else {
       if (curStatus === 'Done') master.getRange(row, COL.COMPLETED).clearContent();
+      if (curStatus === 'Done') portfolioRemove_(id);   // no longer finished work
       if (curStatus === 'In Review' && s !== 'Revisions') leaveReview_(master, row);
       if (s === 'In Progress') {
         if (!(cur[X.STARTED - 1] instanceof Date)) master.getRange(row, X.STARTED).setValue(new Date());

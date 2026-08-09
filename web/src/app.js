@@ -46,6 +46,14 @@ const state = {
   vapidKey: '', pushOn: false, pushWhy: '',
 };
 let tab = 'overview';
+let bootTab_ = '';   // a tab restored from the URL hash, consumed by enterApp
+/* Gallery + assigners state lives HERE, not beside their view functions.
+   A cached boot renders the restored tab while the module is still
+   evaluating, so a `let` further down the file is still in its temporal dead
+   zone and the whole app dies with a ReferenceError. Function declarations
+   hoist; `let` does not. */
+let assignerPick = '';
+let gal = { items: [], next: null, total: 0, loading: false, scope: 'team', team: '', loaded: false };
 let weekOffset = 0;
 let myTab = 'today';
 let mcalOffset = 0;
@@ -578,7 +586,13 @@ async function doLogin(){
 function enterApp(){
   $('#login').style.display = 'none';
   $('#app').classList.add('ready');
-  tab = 'overview'; myTab='today'; mcalOffset=0;
+  /* Honour a tab restored from the URL hash. renderAll writes the current tab
+     into the hash precisely so a refresh — or a PWA cold start — comes back
+     where you were, but this line used to overwrite it unconditionally, so it
+     never actually worked for any tab. Consumed once: a later sign-in starts
+     at the Dashboard as before. */
+  tab = bootTab_ || 'overview'; bootTab_ = '';
+  myTab='today'; mcalOffset=0;
   filters = { team:'', member:'', priority:'', status:'', q:'' }; reportSubject = null;
   weekOffset = ([0,6].indexOf(new Date().getDay())!==-1) ? 1 : 0;
   renderAll();
@@ -665,16 +679,26 @@ const TAB_DEFS_FULL = [
   {id:'overview', ic:'▦', label:'Dashboard'},
   {id:'tasks', ic:'☰', label:'Tasks'},
   {id:'review', ic:'◉', label:'Review'},
+  {id:'gallery', ic:'▨', label:'Gallery'},
   {id:'calendar', ic:'▤', label:'Calendar'},
   {id:'reports', ic:'◔', label:'Reports'},
 ];
 const TAB_DEFS_ASSIGNER = [
   {id:'review', ic:'◉', label:'Review'},
   {id:'tasks', ic:'☰', label:'My tasks'},
+  {id:'gallery', ic:'▨', label:'Gallery'},
   {id:'calendar', ic:'▤', label:'Assign'},
   {id:'reports', ic:'◔', label:'Reports'},
 ];
-function TAB_DEFS_(){ return isAssigner() ? TAB_DEFS_ASSIGNER : TAB_DEFS_FULL; }
+/* Assigners tab is for the people who receive the requests, not the people who
+   make them — a head or admin picking one assigner at a time. */
+function TAB_DEFS_(){
+  if(isAssigner()) return TAB_DEFS_ASSIGNER;
+  if(!(isHead() || isAdmin())) return TAB_DEFS_FULL;
+  const t = TAB_DEFS_FULL.slice();
+  t.splice(3, 0, {id:'assigners', ic:'◈', label:'Assigners'});
+  return t;
+}
 function renderNav(){
   const odCount = state.tasks.filter(isOverdue).length;
   const rvCount = reviewBadge();
@@ -692,7 +716,10 @@ function renderNav(){
   if(tb){
     const items = TAB_DEFS_().map(x=>`<button class="tb ${tab===x.id?'active':''}" data-tab="${x.id}"><span class="ic">${x.ic}</span>${x.label}${x.id==='overview'&&odCount? `<span class="nb">${odCount}</span>` : x.id==='review'&&rvCount? `<span class="nb">${rvCount}</span>`:''}</button>`);
     items.splice(2, 0, `<button class="tb tb-new" aria-label="New task" onclick="openNewTaskModal()"><span class="plus">＋</span></button>`);
-    tb.style.gridTemplateColumns = 'repeat(' + items.length + ',1fr)';
+    /* minmax(0,1fr), not 1fr: a plain 1fr track refuses to shrink below its
+       content, so at seven tabs the bar ran off the side of the phone. */
+    tb.style.gridTemplateColumns = 'repeat(' + items.length + ',minmax(0,1fr))';
+    tb.classList.toggle('tight', items.length > 6);
     tb.innerHTML = items.join('');
     tb.querySelectorAll('.tb[data-tab]').forEach(b=> b.onclick = ()=>{ tab=b.dataset.tab; renderAll(); });
   }
@@ -2551,7 +2578,10 @@ async function rejectTaskClick(id, btn){
 /* ═══════════ RENDER ROOT ═══════════ */
 function renderContent(){
   if(isAssigner() && tab==='overview') tab = 'review';
-  const v = { overview:viewOverview, tasks:viewTasks, review:viewReview, calendar:viewCalendar, reports:viewReports }[tab];
+  /* the boot hash restore runs before we know who is signed in, so a member
+     cold-starting #assigners would otherwise render a tab they cannot have */
+  if(tab==='assigners' && !(isHead() || isAdmin())) tab = 'overview';
+  const v = { overview:viewOverview, tasks:viewTasks, review:viewReview, calendar:viewCalendar, reports:viewReports, gallery:viewGallery, assigners:viewAssigners }[tab] || viewOverview;
   $('#content').innerHTML = v();
   if(tab==='calendar') bindCalendarDrag();
   if(tab==='overview'){ const box = document.getElementById('ov-notifs'); if(box) bindNotifClicks(box, notifs()); }
@@ -2599,7 +2629,15 @@ document.addEventListener('visibilitychange', ()=>{ if(state.me && document.visi
 
 /* boot */
 /* v5: restore the tab from the hash before first render */
-(function(){ const h = location.hash.slice(1); if(h && ['overview','tasks','review','calendar','reports'].indexOf(h) > -1) tab = h; })();
+/* Boot hash restore. Hard-coded rather than derived from TAB_DEFS_(): state.me
+   is still null here, so TAB_DEFS_() would return the plain list and drop
+   'assigners' — a head refreshing that tab, or cold-starting the installed app
+   on it, would silently land on the Dashboard. renderContent re-checks the
+   role, so an id someone is not entitled to is corrected a moment later. */
+(function(){
+  const h = location.hash.slice(1);
+  if(h && ['overview','tasks','review','gallery','assigners','calendar','reports'].indexOf(h) > -1) { tab = h; bootTab_ = h; }
+})();
 const __rvQS = new URLSearchParams(location.search);
 /* short route: #/r/<token>[?api=…] — checked before the legacy ?review= form */
 const __rvHash = (location.hash || '').match(/^#\/r\/([A-Za-z0-9]{8,40})(?:\?(.*))?$/);
@@ -2661,9 +2699,207 @@ if(__rvTok){
  ['rv', v => (rv = v), () => rv],
  ['bulkRows', v => (bulkRows = v), () => bulkRows],
  ['reportScope', v => (reportScope = v), () => reportScope],
+ ['assignerPick', v => (assignerPick = v), () => assignerPick],
  ['teamStats', v => (teamStats = v), () => teamStats],
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest, viewGallery, viewAssigners, setAssigner, assignerList_, setGalScope, setGalTeam, loadGallery, openGalleryItem, galImgFail });
+
+/* ═══════════ ASSIGNERS ═══════════
+   Who asked for what. Assigners sit outside the Graphic/Video teams — they are
+   the people who commission the work — so their requests scatter across both
+   teams and never appear grouped anywhere else in the app. */
+
+
+function assignerList_(){
+  const roles = {};
+  (state.roster || []).forEach(m => { roles[m.name] = m.role; });
+  const seen = {};
+  /* Everyone with the Assigner role, so a newly added one shows up ready to
+     use even before their first request... */
+  (state.roster || []).filter(m => m.role === 'Assigner')
+    .forEach(m => { seen[m.name] = { name: m.name, role: 'Assigner', active: m.active !== false }; });
+  /* ...and everyone who has ACTUALLY commissioned work, whatever their role.
+     In this studio the heads and members request from each other constantly, so
+     filtering to the Assigner role alone left the tab completely empty. */
+  (state.tasks || []).forEach(t => {
+    const r = String(t.requester || '').trim();
+    if(!r || seen[r]) return;
+    seen[r] = { name: r, role: roles[r] || '', active: true };
+  });
+  return Object.keys(seen).map(k => seen[k])
+    .sort((a,b) => assignerTasks_(b.name).length - assignerTasks_(a.name).length || a.name.localeCompare(b.name));
+}
+
+function assignerTasks_(name){
+  return (state.tasks || []).filter(t => String(t.requester || '').trim() === name);
+}
+
+function assignerStats_(name){
+  const ts = assignerTasks_(name);
+  return {
+    total: ts.length,
+    open: ts.filter(t => !isClosed(t)).length,
+    overdue: ts.filter(isOverdue).length,
+    review: ts.filter(t => t.status === 'In Review').length,
+    done: ts.filter(t => t.status === 'Done').length,
+  };
+}
+
+function setAssigner(name){ assignerPick = name; renderContent(); }
+
+function viewAssigners(){
+  const people = assignerList_();
+  if(!people.length){
+    return `<div class="panel"><div class="empty">Nobody has requested work yet.<br>
+      <span style="color:var(--muted)">Anyone who requests a task appears here. Add dedicated requesters in the Roster with the role <b>Assigner</b> — they don't need a team.</span></div></div>`;
+  }
+  if(!assignerPick || !people.some(p => p.name === assignerPick)) assignerPick = people[0].name;
+
+  const chips = people.map(p => {
+    const s = assignerStats_(p.name);
+    const on = p.name === assignerPick;
+    /* esc() around the JSON: the string is going INSIDE a double-quoted
+       attribute, so raw JSON quotes would close it early and leave the handler
+       as the fragment `setAssigner(`. Every chip would be dead on click. */
+    return `<button class="btn ${on?'btn-p':''}" onclick="setAssigner(${esc(JSON.stringify(p.name))})">
+        ${esc(p.name)}${p.role && p.role !== 'Assigner' ? ` <span style="opacity:.5;font-weight:400">${esc(p.role.toLowerCase())}</span>` : ''}${p.active===false?' <span style="opacity:.55">·inactive</span>':''}
+        <span style="opacity:.7;font-weight:400;margin-left:6px">${s.open}</span>
+        ${s.overdue?`<span style="margin-left:5px;font-weight:700${on?'':';color:var(--accent)'}">⚠${s.overdue}</span>`:''}
+      </button>`;
+  }).join('');
+
+  const s = assignerStats_(assignerPick);
+  const ts = assignerTasks_(assignerPick).slice().sort((a,b) => {
+    const ac = isClosed(a) ? 1 : 0, bc = isClosed(b) ? 1 : 0;
+    if(ac !== bc) return ac - bc;                            // live work first
+    const ad = a.due ? a.due.getTime() : Infinity, bd = b.due ? b.due.getTime() : Infinity;
+    return ad - bd;
+  });
+
+  const td = (v, extra) => `<td style="padding:7px 10px;border-bottom:1px solid var(--line);${extra||''}">${v}</td>`;
+  const rows = ts.map(t => `<tr onclick="openTaskModal('${t.id}')" style="cursor:pointer">
+      ${td(`<b>${esc(t.title)}</b><br><small style="color:var(--muted)">${esc(t.id)}</small>`)}
+      ${td(tdot(t.team) + esc(t.team))}
+      ${td(t.assignee ? esc(t.assignee) : '<span style="color:var(--muted)">unassigned</span>')}
+      ${td(schip(t))}
+      ${td(dueLabel(t), isOverdue(t) ? 'color:var(--accent);font-weight:600' : '')}
+      ${td(t.completed ? fmtD(t.completed) : '—')}
+    </tr>`).join('');
+
+  return `<div class="filters" style="margin-bottom:12px;flex-wrap:wrap">${chips}</div>
+  <div class="panel">
+    <div class="p-h"><h3>${esc(assignerPick)} <span style="color:var(--muted);font-weight:400">· ${s.total} request${s.total===1?'':'s'}</span></h3></div>
+    <div class="kpis" style="margin:10px 0 16px">
+      ${statTile_('Open', s.open)}
+      ${statTile_('Overdue', s.overdue)}
+      ${statTile_('In review', s.review)}
+      ${statTile_('Completed', s.done)}
+    </div>
+    ${(isHead() && !isAdmin()) ? `<div class="login-note" style="padding:0 4px 8px">You see the ${esc(state.me.team)} side of these requests. ${esc(assignerPick)} may have asked the other team for more.</div>` : ""}
+    ${ts.length ? `<div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+        <th>Task</th><th>Team</th><th>Assigned to</th><th>Status</th><th>Due</th><th>Finished</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="mob-list">${ts.map(t => rowHtml(t, true)).join('')}</div>`
+    : `<div class="empty">No requests from ${esc(assignerPick)} yet.</div>`}
+  </div>`;
+}
+
+/* ═══════════ GALLERY ═══════════
+   Finished work, newest first. Reads the server's Portfolio store rather than
+   live tasks: approved tasks get archived out of Master, and the uploaded files
+   themselves are reclaimed after 45 days — the Portfolio keeps a small still of
+   its own so the studio's showreel outlives both. */
+
+
+async function loadGallery(more){
+  if(gal.loading) return;
+  if(more && gal.next == null) return;
+  const page = more ? gal.next : 0;
+  gal.loading = true;
+  if(!more){ gal.items = []; gal.next = null; gal.total = 0; }
+  renderContent();
+  try{
+    const j = await api('gallery', { page, scope: gal.scope, team: gal.team });
+    gal.items = more ? gal.items.concat(j.items || []) : (j.items || []);
+    gal.next = (j.next === undefined ? null : j.next);
+    gal.total = j.total || 0;
+  }catch(err){
+    toast('Could not load the gallery — ' + esc(err.message), true);
+  }
+  gal.loaded = true;
+  gal.loading = false;
+  renderContent();
+}
+
+function setGalScope(v){ if(gal.scope===v) return; gal.scope = v; gal.loaded = false; loadGallery(false); }
+function setGalTeam(v){ gal.team = v; gal.loaded = false; loadGallery(false); }
+
+/** The best picture available, in order of how long it will survive. */
+function galThumb_(it){
+  if(it.thumb) return it.thumb;                                  // our own still: permanent
+  const u = String(it.link || '');
+  const yt = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/))([\w-]{6,})/);
+  if(yt) return 'https://img.youtube.com/vi/' + yt[1] + '/hqdefault.jpg';
+  if(/\.(png|jpe?g|gif|webp)(\?|#|$)/i.test(u)) return u;
+  const dv = u.match(/\/d\/([-\w]{20,})/) || u.match(/[?&]id=([-\w]{20,})/);
+  if(dv) return 'https://drive.google.com/thumbnail?id=' + dv[1] + '&sz=w800';
+  return '';
+}
+
+function galCard_(it, i){
+  const src = galThumb_(it);
+  const who = it.assignee || it.requester || '';
+  return `<figure class="g-card" onclick="openGalleryItem(${i})" title="${esc(it.title)}">
+      ${src ? `<img src="${esc(src)}" alt="${esc(it.title)}" loading="lazy" onerror="galImgFail(this)">`
+            : `<div class="g-noimg"><span class="g-ic">${it.kind === 'link' ? '🔗' : '📄'}</span><span>no preview</span></div>`}
+      <figcaption class="g-meta">
+        <div class="g-t">${esc(it.title)}</div>
+        <div class="g-s">${tdot(it.team)}${esc(it.id)}${who ? ' · ' + esc(String(who).split(' ')[0]) : ''}${it.completed ? ' · ' + fmtD(new Date(it.completed)) : ''}</div>
+      </figcaption></figure>`;
+}
+
+/* A Drive still can 404 when the file was pasted by hand and never link-shared,
+   or was deleted before we captured a copy. Say so rather than leaving a
+   broken-image icon. */
+function galImgFail(img){
+  if(!img || !img.parentNode) return;
+  img.outerHTML = `<div class="g-noimg"><span class="g-ic">🖼</span><span>preview unavailable</span></div>`;
+}
+
+function openGalleryItem(i){
+  const it = gal.items[i]; if(!it) return;
+  if(state.tasks.some(t => t.id === it.id)){ openTaskModal(it.id); return; }
+  if(it.link) window.open(it.link, '_blank', 'noopener');   // archived out of the board
+}
+
+function viewGallery(){
+  if(!gal.loaded && !gal.loading) loadGallery(false);
+
+  const canScope = isHead() || isAdmin();
+  const bar = canScope ? `<div class="filters" style="margin-bottom:12px;align-items:center">
+      <button class="btn ${gal.scope==='team'?'btn-p':''}" onclick="setGalScope('team')">${isAdmin()?'Everyone':'Whole team'}</button>
+      <button class="btn ${gal.scope==='mine'?'btn-p':''}" onclick="setGalScope('mine')">Just mine</button>
+      ${isAdmin() ? `<select class="mini-sel" style="margin-left:auto" onchange="setGalTeam(this.value)">
+          <option value="">All teams</option>
+          ${(state.teams||[]).map(x=>`<option ${gal.team===x?'selected':''}>${esc(x)}</option>`).join('')}
+        </select>` : ''}
+    </div>` : '';
+
+  if(gal.loading && !gal.items.length) return bar + `<div class="panel"><div class="empty">Loading the gallery…</div></div>`;
+
+  if(!gal.items.length){
+    return bar + `<div class="panel"><div class="empty">Nothing here yet.<br>
+      <span style="color:var(--muted)">Finished work appears automatically once a task is approved with a file attached.</span></div></div>`;
+  }
+
+  return bar +
+    `<div class="g-count">${gal.total} finished ${gal.total===1?'piece':'pieces'}</div>` +
+    `<div class="gallery">${gal.items.map(galCard_).join('')}</div>` +
+    (gal.next != null
+      ? `<div style="text-align:center;margin:18px 0"><button class="btn btn-g" onclick="loadGallery(true)"${gal.loading?' disabled':''}>${gal.loading?'Loading…':'Show more'}</button></div>`
+      : `<div class="g-end">That's everything.</div>`);
+}
+
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });
