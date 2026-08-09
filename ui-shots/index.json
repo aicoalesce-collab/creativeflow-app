@@ -1,0 +1,275 @@
+[
+  {
+    "file": "01-login.png",
+    "title": "Login",
+    "role": "everyone",
+    "group": "Sign in",
+    "device": "desktop"
+  },
+  {
+    "file": "02-login-error.png",
+    "title": "Login — wrong code",
+    "role": "everyone",
+    "group": "Sign in",
+    "device": "desktop"
+  },
+  {
+    "file": "10-admin-dashboard.png",
+    "title": "Dashboard",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "11-admin-tasks.png",
+    "title": "Tasks — list + filters",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "12-admin-review-queue.png",
+    "title": "Review queue",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "13-admin-assigners.png",
+    "title": "Assigners — who asked for what",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "14-admin-gallery.png",
+    "title": "Gallery — finished work",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "15-admin-calendar.png",
+    "title": "Calendar — drag to reschedule",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "16-admin-reports-person.png",
+    "title": "Reports — by person",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "17-admin-reports-combined.png",
+    "title": "Reports — teams combined + task log",
+    "role": "Super Admin",
+    "group": "Main tabs",
+    "device": "desktop"
+  },
+  {
+    "file": "20-admin-notifications.png",
+    "title": "Notifications panel (bell)",
+    "role": "Super Admin",
+    "group": "Panels & menus",
+    "device": "desktop"
+  },
+  {
+    "file": "21-admin-account.png",
+    "title": "Account menu — notifications, theme, sign out",
+    "role": "Super Admin",
+    "group": "Panels & menus",
+    "device": "desktop"
+  },
+  {
+    "file": "30-task-modal.png",
+    "title": "Task detail — full edit",
+    "role": "Super Admin",
+    "group": "Modals",
+    "device": "desktop"
+  },
+  {
+    "file": "31-task-modal-overlimit.png",
+    "title": "Task detail — over revision limit",
+    "role": "Super Admin",
+    "group": "Modals",
+    "device": "desktop"
+  },
+  {
+    "file": "32-new-task.png",
+    "title": "New task — save / add another / start work",
+    "role": "Super Admin",
+    "group": "Modals",
+    "device": "desktop"
+  },
+  {
+    "file": "33-bulk-add.png",
+    "title": "Bulk add — paste rows",
+    "role": "Super Admin",
+    "group": "Modals",
+    "device": "desktop"
+  },
+  {
+    "file": "40-review-image.png",
+    "title": "Review room — image, pins",
+    "role": "Super Admin",
+    "group": "Review room",
+    "device": "desktop"
+  },
+  {
+    "file": "41-review-share.png",
+    "title": "Review room — share links",
+    "role": "Super Admin",
+    "group": "Review room",
+    "device": "desktop"
+  },
+  {
+    "file": "42-review-video.png",
+    "title": "Review room — video, timecode markers",
+    "role": "Super Admin",
+    "group": "Review room",
+    "device": "desktop"
+  },
+  {
+    "file": "50-guest-comment.png",
+    "title": "Guest link — can annotate",
+    "role": "Client (guest)",
+    "group": "Review room",
+    "device": "desktop"
+  },
+  {
+    "file": "51-guest-viewonly.png",
+    "title": "Guest link — view only",
+    "role": "Client (guest)",
+    "group": "Review room",
+    "device": "desktop"
+  },
+  {
+    "file": "60-head-dashboard.png",
+    "title": "Dashboard",
+    "role": "Team Head",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "61-head-gallery.png",
+    "title": "Gallery — whole team / just mine",
+    "role": "Team Head",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "62-head-reports.png",
+    "title": "Reports — team combined",
+    "role": "Team Head",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "70-member-dashboard.png",
+    "title": "Dashboard — only my work",
+    "role": "Member",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "71-member-tasks.png",
+    "title": "Tasks",
+    "role": "Member",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "72-member-gallery.png",
+    "title": "Gallery — my finished work",
+    "role": "Member",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "80-assigner-home.png",
+    "title": "Assigner home — review first",
+    "role": "Assigner",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "81-assigner-tasks.png",
+    "title": "My requests",
+    "role": "Assigner",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "82-assigner-gallery.png",
+    "title": "Gallery — work I commissioned",
+    "role": "Assigner",
+    "group": "Other roles",
+    "device": "desktop"
+  },
+  {
+    "file": "90-phone-dashboard.png",
+    "title": "Dashboard",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "91-phone-tasks.png",
+    "title": "Tasks",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "92-phone-gallery.png",
+    "title": "Gallery",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "93-phone-assigners.png",
+    "title": "Assigners",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "94-phone-reports.png",
+    "title": "Reports — combined",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "95-phone-task.png",
+    "title": "Task detail",
+    "role": "Super Admin",
+    "group": "Phone (390px)",
+    "device": "phone"
+  },
+  {
+    "file": "A0-dark-dashboard.png",
+    "title": "Dashboard — dark",
+    "role": "Super Admin",
+    "group": "Dark theme",
+    "device": "desktop"
+  },
+  {
+    "file": "A1-dark-gallery.png",
+    "title": "Gallery — dark",
+    "role": "Super Admin",
+    "group": "Dark theme",
+    "device": "desktop"
+  },
+  {
+    "file": "A2-dark-review.png",
+    "title": "Review room — dark",
+    "role": "Super Admin",
+    "group": "Dark theme",
+    "device": "desktop"
+  }
+]

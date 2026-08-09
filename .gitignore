@@ -17,3 +17,5 @@ tools/probe/probe.exe
 .env
 .env.*
 exe/rsrc_windows_*.syso
+# UI audit screenshots: regenerate with tests/capture, not worth versioning 6MB of PNG
+ui-shots/*.png
