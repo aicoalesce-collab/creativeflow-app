@@ -246,6 +246,12 @@ function createTask(u, req, quiet) {
     const m = state.roster.find(x => x.active && x.name === assignee);
     if (!m) return { ok: false, error: 'VALIDATION', message: 'Assignee not found in the Roster.' };
     team = m.team;
+    // allocation is the head's call; a member may keep their OWN work
+    const boss = u.role === 'Super Admin' || u.role === 'Team Head';
+    if (!boss && assignee !== u.name) {
+      return { ok: false, error: 'FORBIDDEN',
+        message: 'Your team head decides who picks this up — send it in and they will allocate it.' };
+    }
   }
   if (!TEAMS.some(t => t.team === team)) return { ok: false, error: 'VALIDATION', message: 'Unknown team: ' + team };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(req.dueDate || ''))) return { ok: false, error: 'VALIDATION', message: 'A due date is required.' };
@@ -353,6 +359,10 @@ function updateTask(u, req) {
 
   if (p.status !== undefined && String(p.status) !== curStatus) {
     const s = String(p.status);
+    // validate BEFORE the write, or the task moves and reports an error too
+    if (s === 'In Review' && !String(t.deliverable || '').trim() && !String(p.deliverable || '').trim()) {
+      return { ok: false, error: 'VALIDATION', message: 'Attach the file or paste a link before sending this for QC.' };
+    }
     t.status = s;
     if (s === 'Done') {
       t.stage = ''; t.completed = nowIso();

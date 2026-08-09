@@ -1270,6 +1270,7 @@ function openTaskModal(id){
       ${(manage || (myReq && t.status==='New' && !t.startedAt))? `<button class="btn btn-danger" style="margin-right:auto" onclick="deleteTaskClick('${t.id}', this)">🗑 Delete</button>`:''}
       ${(mineTask||manage||(state.me && state.me.team===t.team && !t.assignee && !isAssigner())) && (t.status==='New' || t.status==='On Hold' || (t.status==='In Progress' && !t.startedAt))? `<button class="btn btn-p" onclick="startTaskClick('${t.id}', this)">${!t.assignee && !mineTask? '▶ Start & take this task' : (t.status==='On Hold'? '▶ Resume work' : '▶ Start work')}</button>`:''}
       ${(mineTask||manage) && t.status==='Revisions'? `<button class="btn btn-p" onclick="acceptChangesClick('${t.id}', this)">▶ Accept & start fixes</button>`:''}
+      ${(mineTask||manage) && t.status==='In Progress'? `<button class="btn btn-p" onclick="sendForQcClick('${t.id}', this)" title="Sends it to your team head for the internal check">Send for QC →</button>`:''}
       ${(mineTask||manage) && t.status==='In Progress'? `<button class="btn btn-g" onclick="holdTaskClick('${t.id}', this)">⏸ Hold</button>`:''}
       ${manage && t.status==='In Review' && t.stage!=='Assigner'? `<button class="btn btn-ok" onclick="qcPassClick('${t.id}', this)">✓ Pass QC → requester</button>`:''}
       ${(mineTask||manage) && hasFlagC(t,'auto-done')? `<button class="btn btn-warn" onclick="renewTaskClick('${t.id}', this)">↻ Renew as new task</button>`:''}
@@ -1381,7 +1382,7 @@ function openNewTaskModal(preProject){
   const pre = typeof preProject === 'string' ? preProject : '';
   const canProject = isHead() || isAdmin() || isAssigner();
   $('#overlay').innerHTML = `<div class="modal" role="dialog" aria-modal="true">
-    <h2>＋ NEW TASK</h2><div class="msub">Anyone can add a task — it goes straight into the master sheet. Leave "Assign to" empty and the team head will allocate it.</div>
+    <h2>＋ NEW TASK</h2><div class="msub">${(isHead()||isAdmin()) ? 'Leave “Assign to” empty and it waits on the board for whoever picks it up.' : 'Send it in and your team head allocates it — you’ll hear who picked it up, and it comes back to you for approval.'}</div>
     <div class="fgrid">
       <div class="field"><label>Team</label><select id="n-team">${state.teams.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div>
       <div class="field"><label>Priority</label><select id="n-priority"><option>Medium</option><option>Urgent</option><option>High</option><option>Low</option></select></div>
@@ -1389,7 +1390,17 @@ function openNewTaskModal(preProject){
       <div class="field f-full"><label>Description / brief</label><textarea id="n-desc" rows="2" placeholder="What exactly is needed?"></textarea></div>
       <div class="field"><label>Due date</label><input type="date" id="n-due" value="${dflt.getFullYear()}-${String(dflt.getMonth()+1).padStart(2,'0')}-${String(dflt.getDate()).padStart(2,'0')}"></div>
 
-      <div class="field"><label>Assign to (optional)</label><select id="n-assignee"><option value="">Let the team head decide</option>${state.roster.filter(m=>m.role!=='Super Admin').map(m=>`<option value="${esc(m.name)}" data-team="${esc(m.team)}">${esc(m.name)} — ${esc(m.team)}</option>`).join('')}</select></div>
+      ${(function(){
+        /* Allocation is the head's call. An assigner sends work in and never picks
+           the person; a member may log their own work and keep it. Mirrored on
+           the server in apiCreate_ — this is the courtesy, that is the rule. */
+        const boss = isHead() || isAdmin();
+        if(boss) return `<div class="field"><label>Assign to (optional)</label><select id="n-assignee"><option value="">Let the team head decide</option>${state.roster.filter(m=>m.role!=='Super Admin').map(m=>`<option value="${esc(m.name)}" data-team="${esc(m.team)}">${esc(m.name)} — ${esc(m.team)}</option>`).join('')}</select></div>`;
+        /* Text, not a disabled input: a greyed-out field reads as broken, and
+           this is information rather than something anyone can fill in. */
+        if(isAssigner()) return `<div class="field"><label>Assign to</label><div class="field-note">Your team head decides — you’ll be told who picks it up.</div></div>`;
+        return `<div class="field"><label>Assign to</label><select id="n-assignee"><option value="">Let the team head decide</option><option value="${esc(state.me.name)}">${esc(state.me.name)} — I’ll do this one</option></select></div>`;
+      })()}
       <div class="field"><label>Brief / asset link</label><input id="n-brief" placeholder="drive.google.com/…"></div>
       <div class="field f-full"><label>Campaign <span style="font-weight:400;text-transform:none;letter-spacing:0">· optional</span></label>
         <div style="display:flex;gap:8px">
@@ -2524,6 +2535,34 @@ async function renewTaskClick(id, btn){
     toast('Could not renew — '+esc(err.message), true);
   }
 }
+/**
+ * "Send for QC" — the member's one button at the end of a round.
+ *
+ * It sets status to In Review, which routes to the team head first (the server
+ * decides QC versus straight-to-assigner). Nobody has to know that "In Review"
+ * means "my head has it" — which is exactly why the status dropdown was a poor
+ * place for this.
+ *
+ * The empty check is here AND on the server: this one is the courtesy, the
+ * server's is the rule.
+ */
+async function sendForQcClick(id, btn){
+  const t = state.tasks.find(x => x.id === id);
+  const el = document.getElementById('m-deliverable');
+  const link = (el ? el.value : '') || (t && t.deliverable) || '';
+  if(!String(link).trim()){
+    toast('Attach the file or paste a link before sending this for QC.', true);
+    if(el) el.focus();
+    return;
+  }
+  if(btn && !btn.dataset.armed){
+    btn.dataset.armed = '1'; btn.textContent = 'Send to your head?';
+    setTimeout(() => { if(btn && btn.dataset){ btn.dataset.armed = ''; btn.textContent = 'Send for QC →'; } }, 3000);
+    return;
+  }
+  await simpleAction_('updateTask', { id, patch: { status: 'In Review', deliverable: String(link).trim() } }, btn, 'Sent for QC.');
+}
+
 async function holdTaskClick(id, btn){
   if(btn) btn.disabled = true;
   try{
@@ -2739,7 +2778,7 @@ if(__rvTok){
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest, viewGallery, viewAssigners, setAssigner, assignerList_, viewProjects, loadProjects, openProject, closeProject, setProjSub, setProjStatus, openNewProjectModal, createProject, addProjNote, delProjNote, openAddPill, closeAddPill, toggleInlineProject, setGalScope, setGalTeam, loadGallery, openGalleryItem, galImgFail });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest, viewGallery, viewAssigners, setAssigner, assignerList_, viewProjects, loadProjects, openProject, closeProject, setProjSub, setProjStatus, openNewProjectModal, createProject, addProjNote, delProjNote, openAddPill, closeAddPill, toggleInlineProject, sendForQcClick, setGalScope, setGalTeam, loadGallery, openGalleryItem, galImgFail });
 
 /* ═══════════ ASSIGNERS ═══════════
    Who asked for what. Assigners sit outside the Graphic/Video teams — they are

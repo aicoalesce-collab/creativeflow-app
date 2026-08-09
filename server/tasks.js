@@ -163,6 +163,15 @@ function apiCreate_(user, req) {
     const m = roster_().filter(x => x.active && x.name === assignee);
     if (!m.length) return { ok: false, error: 'VALIDATION', message: 'Assignee not found in the Roster.' };
     team = m[0].team;
+    /* Allocation is the team head's call. An assigner sends work in and the head
+       decides who does it; a member may log their OWN work and keep it, but may
+       not put a task on a colleague. Enforced here, not just hidden in the UI,
+       so it holds for anything that talks to the API directly. */
+    const boss = user.role === 'Super Admin' || user.role === 'Team Head';
+    if (!boss && assignee !== user.name) {
+      return { ok: false, error: 'FORBIDDEN',
+        message: 'Your team head decides who picks this up — send it in and they will allocate it.' };
+    }
   }
   if (teams_().map(t => t.team).indexOf(team) === -1) return { ok: false, error: 'VALIDATION', message: 'Unknown team: ' + team };
   const due = parseDueParts_(req.dueDate, req.dueTime);
@@ -349,6 +358,13 @@ function apiUpdate_(user, req) {
 
   if (p.status !== undefined && String(p.status) !== curStatus) {
     const s = String(p.status);
+    /* Validate BEFORE the first write. This check used to sit further down, by
+       which point the status had already been set — the caller got an error and
+       the task moved anyway, which is the worst of both. */
+    if (s === 'In Review' && !String(cur[COL.DELIVERABLE - 1] || '').trim() && !String(p.deliverable || '').trim()) {
+      return { ok: false, error: 'VALIDATION',
+        message: 'Attach the file or paste a link before sending this for QC.' };
+    }
     master.getRange(row, COL.STATUS).setValue(s);
     if (s === 'Done') {
       leaveReview_(master, row);

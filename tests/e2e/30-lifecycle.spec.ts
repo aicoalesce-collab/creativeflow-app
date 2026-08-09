@@ -24,7 +24,9 @@ test.describe('task lifecycle', () => {
     expect(started.task.status).toBe('In Progress');
     expect(started.task.startedAt).toBeTruthy();
 
-    const review = await call(page, { action: 'updateTask', id, patch: { status: 'In Review' }, ...M });
+    /* A task now needs something attached before it can go to QC — an empty
+       task teaches the head nothing. Send the file with the submission. */
+    const review = await call(page, { action: 'updateTask', id, patch: { status: 'In Review', deliverable: 'https://drive.google.com/file/d/1LifecycleFileIdAbCdEfGh/view' }, ...M });
     expect(review.task.stage).toBe('QC');          // member submission goes to QC first
 
     const qc = await call(page, { action: 'qcPass', id, ...H });
@@ -38,7 +40,7 @@ test.describe('task lifecycle', () => {
     const acc = await call(page, { action: 'acceptChanges', id, ...M });
     expect(acc.task.status).toBe('In Progress');
 
-    await call(page, { action: 'updateTask', id, patch: { status: 'In Review' }, ...M });
+    await call(page, { action: 'updateTask', id, patch: { status: 'In Review' }, ...M });   // file still attached from round 1
     const done = await call(page, { action: 'updateTask', id, patch: { status: 'Done' }, ...H });
     expect(done.task.status).toBe('Done');
     expect(done.task.completed).toBeTruthy();
@@ -92,7 +94,10 @@ test.describe('task lifecycle', () => {
     expect(blocked.message).toMatch(/Accept updated brief/i);
     const acc = await call(page, { action: 'acceptBrief', id: 'GD-0008', ...M });
     expect(acc.task.briefPending).toBe(false);
-    const ok = await call(page, { action: 'updateTask', id: 'GD-0008', patch: { status: 'In Review' }, ...M });
+    /* …and it still needs a file, which is a separate rule from the brief. */
+    const empty = await call(page, { action: 'updateTask', id: 'GD-0008', patch: { status: 'In Review' }, ...M });
+    expect(empty.error).toBe('VALIDATION');
+    const ok = await call(page, { action: 'updateTask', id: 'GD-0008', patch: { status: 'In Review', deliverable: 'https://drive.google.com/file/d/1LifecycleFileIdAbCdEfGh/view' }, ...M });
     expect(ok.ok).toBe(true);
   });
 

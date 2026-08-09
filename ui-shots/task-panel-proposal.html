@@ -1,0 +1,448 @@
+<title>CreativeFlow — the task window, redesigned</title>
+<style>
+  :root{
+    --paper:#faf9f6; --card:#ffffff; --sunk:#f2efe8; --ink:#17140f; --ink-2:#4a453d;
+    --muted:#8a8378; --line:#e8e4da; --line-2:#d6d1c4;
+    --act:#e8502a; --act-ink:#ffffff; --act-soft:#fdeee9;
+    --late:#b3341c; --review:#4f46b8; --good:#2b7a52; --wait:#9a7b12;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#131211; --card:#1c1a18; --sunk:#232120; --ink:#f4f1ea; --ink-2:#c3bdb2;
+    --muted:#918a7e; --line:#2c2926; --line-2:#3a3631;
+    --act:#f4653c; --act-ink:#131211; --act-soft:#3a2018;
+    --late:#f0705a; --review:#8b83f0; --good:#5fb98a; --wait:#d8b544;
+  }}
+  :root[data-theme="dark"]{
+    --paper:#131211; --card:#1c1a18; --sunk:#232120; --ink:#f4f1ea; --ink-2:#c3bdb2;
+    --muted:#918a7e; --line:#2c2926; --line-2:#3a3631;
+    --act:#f4653c; --act-ink:#131211; --act-soft:#3a2018;
+    --late:#f0705a; --review:#8b83f0; --good:#5fb98a; --wait:#d8b544;
+  }
+  :root[data-theme="light"]{
+    --paper:#faf9f6; --card:#ffffff; --sunk:#f2efe8; --ink:#17140f; --ink-2:#4a453d;
+    --muted:#8a8378; --line:#e8e4da; --line-2:#d6d1c4;
+    --act:#e8502a; --act-ink:#ffffff; --act-soft:#fdeee9;
+    --late:#b3341c; --review:#4f46b8; --good:#2b7a52; --wait:#9a7b12;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px 110px}
+  header{padding:72px 0 28px;border-bottom:1px solid var(--line-2)}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--act);font-weight:600;margin:0 0 15px}
+  h1{margin:0;font-size:clamp(28px,4vw,44px);line-height:1.06;letter-spacing:-.026em;font-weight:700;max-width:18ch;text-wrap:balance}
+  .lede{margin:18px 0 0;max-width:62ch;color:var(--ink-2);font-size:17px}
+  section{padding-top:52px}
+  .sh{display:flex;align-items:baseline;gap:13px;border-bottom:1px solid var(--ink);padding-bottom:9px;margin-bottom:20px}
+  .sn{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--act)}
+  .sh h2{margin:0;font-size:21px;letter-spacing:-.016em;font-weight:700}
+  p{max-width:66ch;color:var(--ink-2)}
+  p.tight{margin-top:0}
+
+  /* ── the flow rail ── */
+  .flow{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card);margin:18px 0 10px}
+  .fstep{flex:1;min-width:150px;padding:13px 15px;border-right:1px solid var(--line)}
+  .fstep:last-child{border-right:0}
+  .fstep b{display:block;font-size:13.5px;font-weight:650}
+  .fstep span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .fstep i{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+           color:var(--act);font-style:normal;margin-bottom:5px;font-weight:600}
+  .fstep.auto i{color:var(--muted)}
+
+  /* ── the panel ── */
+  .panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px;margin-top:8px}
+  .p-wrap > h4{margin:0 0 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .s-h{padding:13px 15px 12px;border-bottom:1px solid var(--line)}
+  .s-id{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .pill{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+        padding:2px 8px;border-radius:99px}
+  .pill.now{background:var(--sunk);color:var(--ink-2)}
+  .pill.qc{background:rgba(79,70,184,.12);color:var(--review)}
+  .pill.appr{background:rgba(154,123,18,.14);color:var(--wait)}
+  .pill.rev{background:var(--act-soft);color:var(--late)}
+  .pill.done{background:rgba(43,122,82,.13);color:var(--good)}
+  .s-h h3{margin:5px 0 0;font-size:16px;letter-spacing:-.014em;font-weight:700}
+
+  /* progress rail inside the panel */
+  .rail{display:flex;gap:3px;padding:11px 15px 12px;border-bottom:1px solid var(--line)}
+  .rseg{flex:1}
+  .rseg i{display:block;height:3px;border-radius:99px;background:var(--line-2)}
+  .rseg span{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:5px;font-weight:650}
+  .rseg.on i{background:var(--ink)}
+  .rseg.on span{color:var(--ink)}
+  .rseg.at i{background:var(--act)}
+  .rseg.at span{color:var(--act)}
+
+  .people{display:flex;gap:0;border-bottom:1px solid var(--line)}
+  .per{flex:1;padding:10px 15px;border-right:1px solid var(--line);display:flex;align-items:center;gap:9px}
+  .per:last-child{border-right:0}
+  .av{width:27px;height:27px;border-radius:99px;background:var(--sunk);color:var(--ink-2);flex:none;
+      display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .per small{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:650}
+  .per b{display:block;font-size:12.5px;font-weight:600;margin-top:1px}
+
+  .s-b{padding:13px 15px}
+  .waiting{background:var(--sunk);border-radius:9px;padding:11px 12px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .waiting.hot{background:var(--act-soft);color:var(--late)}
+  .waiting b{color:inherit}
+  .zone{border:1.5px dashed var(--line-2);border-radius:10px;padding:15px;text-align:center;color:var(--muted);font-size:11.5px;margin-top:11px}
+  .zone b{display:block;color:var(--ink);font-size:12.5px;font-weight:650;margin-bottom:2px}
+  .file{display:flex;align-items:center;gap:9px;background:var(--sunk);border-radius:9px;padding:10px 12px;margin-top:11px;font-size:12.5px}
+  .file .ic{width:26px;height:26px;border-radius:7px;background:var(--card);display:flex;align-items:center;justify-content:center;flex:none}
+  .file b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file small{color:var(--muted);font-size:10.5px;display:block}
+
+  .acts{display:flex;gap:8px;padding:0 15px 13px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line-2);background:var(--card);color:var(--ink);border-radius:9px;padding:10px 13px;
+       font-size:12.5px;font-weight:650;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.p{background:var(--act);border-color:var(--act);color:var(--act-ink);flex:1;min-width:150px}
+  .btn.d{background:var(--ink);border-color:var(--ink);color:var(--paper);flex:1;min-width:150px}
+  .btn.q{color:var(--ink-2)}
+  .btn.more{padding:10px 12px;color:var(--muted)}
+  .fold{border-top:1px solid var(--line);padding:10px 15px;color:var(--muted);font-size:11.5px}
+
+  /* matrix */
+  .tbl-w{overflow-x:auto;border:1px solid var(--line);border-radius:11px;background:var(--card);margin-top:8px}
+  table{border-collapse:collapse;width:100%;min-width:660px;font-size:13px}
+  th{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line-2);font-size:10px;letter-spacing:.11em;
+     text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+  td{padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.st{white-space:nowrap;font-weight:650}
+  td.who{white-space:nowrap;color:var(--ink-2)}
+  .k{display:inline-block;background:var(--act);color:var(--act-ink);border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:650;margin:0 5px 4px 0}
+  .k.n{background:var(--sunk);color:var(--ink-2)}
+  .k.d{background:var(--ink);color:var(--paper)}
+
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px;align-items:start}
+  @media (max-width:800px){.cmp{grid-template-columns:1fr}}
+  .box{border:1px solid var(--line);border-radius:11px;background:var(--card);padding:14px}
+  .box h4{margin:0 0 10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+  .box.bad h4{color:var(--late)}
+  .chiprow{display:flex;flex-wrap:wrap;gap:6px}
+  .chiprow span{font-size:11.5px;padding:5px 9px;border-radius:7px;background:var(--sunk);color:var(--ink-2)}
+  .box.bad .chiprow span{background:var(--act-soft);color:var(--late)}
+  ul.plain{max-width:66ch;padding-left:20px;color:var(--ink-2)}
+  ul.plain li{margin-bottom:7px}
+  .ask{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--act);border-radius:10px;padding:16px 18px;max-width:66ch;margin-top:24px}
+  .ask h3{margin:0 0 8px;font-size:16px;color:var(--ink)}
+  .ask ol{margin:0;padding-left:20px;color:var(--ink-2)}
+  footer{margin-top:70px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:11px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">CreativeFlow · the task window</p>
+    <h1>Eight buttons at once, when only two ever apply.</h1>
+    <p class="lede">The dialog shows Delete, Pass QC, Review, Reject, Approve, Request revisions, Close and
+      Save on every task, to every person, in every state. Below: the same window showing only what is
+      actually possible right now, and who it is waiting on.</p>
+  </header>
+
+  <section>
+    <div class="sh"><span class="sn">01</span><h2>Your flow, as the system already runs it</h2></div>
+    <p class="tight">I checked this against the code rather than assuming — what you described is what is
+      built. Two details you may not know, both in your favour.</p>
+
+    <div class="flow">
+      <div class="fstep"><i>Manual · member</i><b>Save &amp; start work</b><span>New → In progress</span></div>
+      <div class="fstep"><i>Manual · member</i><b>Send for QC</b><span>goes to the team head first</span></div>
+      <div class="fstep"><i>Manual · head</i><b>Pass QC</b><span>or send it back — free</span></div>
+      <div class="fstep"><i>Manual · assigner</i><b>Approve</b><span>or request changes</span></div>
+      <div class="fstep auto"><i>Automatic</i><b>Done</b><span>or back round to revisions</span></div>
+    </div>
+
+    <ul class="plain">
+      <li><b>A head sending work back at QC does not burn a revision round.</b> Only the assigner's changes
+        count against the three-round limit. Your internal check is free, which is the right way round.</li>
+      <li><b>The head is copied automatically</b> when the assigner requests changes — that already happens,
+        you don't have to tell them.</li>
+      <li><b>Rounds are numbered and carried.</b> Round 2 goes back through the head, and the assigner is
+        pinged again with a fresh review link each time it passes QC.</li>
+      <li>One difference from your description: <b>when a head submits their own work it skips QC</b> and
+        goes straight to the assigner — they would only be checking themselves. Say the word if you want it
+        to stop for a second head instead.</li>
+    </ul>
+    <p><b>What I'd change:</b> the member's action currently reads <i>Status → In Review</i>. It becomes one
+      button that says <b>Send for QC →</b>, so nobody has to know that "In Review" means "my head has it".</p>
+  </section>
+
+  <section>
+    <div class="sh"><span class="sn">02</span><h2>The window, in each state</h2></div>
+    <p class="tight">Same panel, four moments. One primary action, at most two secondary, and a line at the
+      top saying whose move it is. The four-segment rail shows where the task actually sits.</p>
+
+    <div class="panels">
+
+      <div class="p-wrap">
+        <h4>In progress — the person doing it</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">GD-0004 · Graphic <span class="pill now">In progress</span></div>
+            <h3>Stage backdrop v2</h3>
+          </div>
+          <div class="rail">
+            <div class="rseg at"><i></i><span>Working</span></div>
+            <div class="rseg"><i></i><span>QC</span></div>
+            <div class="rseg"><i></i><span>Approval</span></div>
+            <div class="rseg"><i></i><span>Done</span></div>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">RM</span><span><small>Assigned by</small><b>Rohit Mehta</b></span></div>
+            <div class="per"><span class="av">MD</span><span><small>Assigned to</small><b>Maya Designer</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting">◷ Due <b>Fri, 8 Aug · 6:00 PM</b> — started Wed</div>
+            <div class="zone"><b>Drop the artwork here</b>or paste a Drive / YouTube link</div>
+          </div>
+          <div class="acts">
+            <button class="btn p" type="button">Send for QC →</button>
+            <button class="btn q" type="button">Note</button>
+            <button class="btn more" type="button">···</button>
+          </div>
+          <div class="fold">▸ Details · brief, priority, dates, campaign</div>
+        </div>
+      </div>
+
+      <div class="p-wrap">
+        <h4>With QC — the team head</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">GD-0004 · Graphic <span class="pill qc">With you for QC</span></div>
+            <h3>Stage backdrop v2</h3>
+          </div>
+          <div class="rail">
+            <div class="rseg on"><i></i><span>Working</span></div>
+            <div class="rseg at"><i></i><span>QC</span></div>
+            <div class="rseg"><i></i><span>Approval</span></div>
+            <div class="rseg"><i></i><span>Done</span></div>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">RM</span><span><small>Assigned by</small><b>Rohit Mehta</b></span></div>
+            <div class="per"><span class="av">MD</span><span><small>Submitted by</small><b>Maya Designer</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting">Maya sent this 2 hours ago. Check it before the client sees it — sending it
+              back here does <b>not</b> use a revision round.</div>
+            <div class="file"><span class="ic">▤</span><span><b>stage-backdrop-v2.png</b><small>uploaded 2h ago · version 1</small></span></div>
+          </div>
+          <div class="acts">
+            <button class="btn d" type="button">Open review room</button>
+            <button class="btn" type="button">✓ Pass to Rohit</button>
+            <button class="btn q" type="button">↩ Back to Maya</button>
+          </div>
+          <div class="fold">▸ Details</div>
+        </div>
+      </div>
+
+      <div class="p-wrap">
+        <h4>Approval — the assigner who asked for it</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">GD-0004 · Graphic <span class="pill appr">Waiting for you</span></div>
+            <h3>Stage backdrop v2</h3>
+          </div>
+          <div class="rail">
+            <div class="rseg on"><i></i><span>Working</span></div>
+            <div class="rseg on"><i></i><span>QC</span></div>
+            <div class="rseg at"><i></i><span>Approval</span></div>
+            <div class="rseg"><i></i><span>Done</span></div>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">RM</span><span><small>Assigned by</small><b>You</b></span></div>
+            <div class="per"><span class="av">MD</span><span><small>Made by</small><b>Maya Designer</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting">Passed QC by Ira. Mark anything you want changed straight on the artwork —
+              your pins and comments go back to Maya.</div>
+            <div class="file"><span class="ic">▤</span><span><b>stage-backdrop-v2.png</b><small>version 1 · round 1 of 3</small></span></div>
+          </div>
+          <div class="acts">
+            <button class="btn d" type="button">Open review room</button>
+            <button class="btn p" type="button">✓ Approve — Done</button>
+            <button class="btn q" type="button">↩ Request changes</button>
+          </div>
+          <div class="fold">▸ Details</div>
+        </div>
+      </div>
+
+      <div class="p-wrap">
+        <h4>Revisions — back with the maker</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">GD-0004 · Graphic <span class="pill rev">Round 2</span></div>
+            <h3>Stage backdrop v2</h3>
+          </div>
+          <div class="rail">
+            <div class="rseg at"><i></i><span>Working</span></div>
+            <div class="rseg"><i></i><span>QC</span></div>
+            <div class="rseg"><i></i><span>Approval</span></div>
+            <div class="rseg"><i></i><span>Done</span></div>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">RM</span><span><small>Changes from</small><b>Rohit Mehta</b></span></div>
+            <div class="per"><span class="av">MD</span><span><small>Assigned to</small><b>You</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting hot"><b>3 changes marked</b> — logo too low, cut the dead air at 0:12, wrong
+              blue. Ira has been copied.</div>
+          </div>
+          <div class="acts">
+            <button class="btn d" type="button">See the 3 changes</button>
+            <button class="btn p" type="button">✓ Accept &amp; restart</button>
+          </div>
+          <div class="fold">▸ Details</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sh"><span class="sn">03</span><h2>Which button, when</h2></div>
+    <p class="tight">The whole rule in one table. Anything not listed is not shown — not greyed out, not
+      there. Rare and destructive actions live behind the <b>···</b>.</p>
+    <div class="tbl-w">
+      <table>
+        <thead><tr><th>State</th><th>Who's looking</th><th>What they see</th></tr></thead>
+        <tbody>
+          <tr><td class="st">New · unassigned</td><td class="who">Head / admin</td>
+            <td><span class="k">Assign to…</span><span class="k n">Edit</span><span class="k n">···</span></td></tr>
+          <tr><td class="st">New · assigned</td><td class="who">The assignee</td>
+            <td><span class="k">▶ Start work</span><span class="k n">Note</span></td></tr>
+          <tr><td class="st">In progress</td><td class="who">The assignee</td>
+            <td><span class="k">Send for QC →</span><span class="k n">Note</span><span class="k n">···</span></td></tr>
+          <tr><td class="st">In progress</td><td class="who">Anyone else</td>
+            <td><span class="k n">Note</span> <em style="color:var(--muted);font-size:12px">— with Maya</em></td></tr>
+          <tr><td class="st">QC</td><td class="who">Team head</td>
+            <td><span class="k d">Open review room</span><span class="k n">✓ Pass to assigner</span><span class="k n">↩ Back to maker</span></td></tr>
+          <tr><td class="st">QC</td><td class="who">The assignee</td>
+            <td><em style="color:var(--muted);font-size:12px">nothing — "with Ira for QC"</em></td></tr>
+          <tr><td class="st">Approval</td><td class="who">Assigner / head</td>
+            <td><span class="k d">Open review room</span><span class="k">✓ Approve — Done</span><span class="k n">↩ Request changes</span></td></tr>
+          <tr><td class="st">Revisions</td><td class="who">The assignee</td>
+            <td><span class="k d">See the changes</span><span class="k">✓ Accept &amp; restart</span></td></tr>
+          <tr><td class="st">Done</td><td class="who">Head / assigner</td>
+            <td><span class="k n">Reopen</span><span class="k n">Renew as new task</span></td></tr>
+          <tr><td class="st">On hold</td><td class="who">Assignee / head</td>
+            <td><span class="k">Resume</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sh"><span class="sn">04</span><h2>What goes, and where it goes</h2></div>
+    <div class="cmp">
+      <div class="box bad">
+        <h4>On screen today, always</h4>
+        <div class="chiprow">
+          <span>Delete</span><span>Pass QC → requester</span><span>Review</span><span>Reject</span>
+          <span>Approve → Done</span><span>Request revisions</span><span>Close</span><span>Save changes</span>
+        </div>
+        <p style="font-size:13px;margin:12px 0 0">Eight, of which at most two ever apply. Six are decisions
+          you cannot make, shown at the same weight as the one you can.</p>
+      </div>
+      <div class="box">
+        <h4>Where each one lands</h4>
+        <ul class="plain" style="margin:0;font-size:13.5px">
+          <li><b>Delete, Reject</b> → behind <b>···</b>. Both are rare and neither is reversible.</li>
+          <li><b>Save changes</b> → gone. Fields save when you leave them, like the sheet does.</li>
+          <li><b>Close</b> → gone. Escape, or click outside.</li>
+          <li><b>Review</b> → becomes the dark primary button, but only when there is something to review.</li>
+          <li><b>Pass QC / Approve / Request revisions</b> → one pair, only for whoever's move it is.</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:18px">The twelve fields fold under <b>Details</b>. Team, priority, due time and
+      brief almost never change after a task is created — and when they do, it is deliberate enough to be
+      worth one click.</p>
+  </section>
+
+<section>
+    <div class="sh"><span class="sn">05</span><h2>Assigned by, and who allocates</h2></div>
+    <p class="tight">Two people, side by side at the top of every task: who asked for it and who is doing it.
+      It's the first thing anyone wants to know, and today it sits in grey subtitle text between the created
+      date and the revision count.</p>
+    <p><b>Assigned by fills itself</b> — it is whoever created the task, never a field anyone picks. The
+      label changes with the state, because the useful fact changes: <b>Assigned by</b> normally,
+      <b>Submitted by</b> while a head is doing QC, <b>Changes from</b> during a revision round.</p>
+
+    <p style="margin-top:22px"><b>And the allocation rule you just asked for:</b> when an assigner sends
+      work in, they do not choose who does it. The task arrives with the team head, who allocates. So the
+      new-task box is a different shape depending on who opens it.</p>
+
+    <div class="cmp">
+      <div class="p-wrap">
+        <h4>An assigner creating a task</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">New task · Graphic</div>
+            <h3>What do you need?</h3>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">RM</span><span><small>Assigned by</small><b>You — automatic</b></span></div>
+            <div class="per"><span class="av" style="background:var(--act-soft);color:var(--late)">?</span><span><small>Assigned to</small><b style="color:var(--muted)">Ira decides</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting">Your team head allocates this. You'll be told who picked it up, and it
+              comes back to you for approval when it's ready.</div>
+            <div class="zone" style="margin-top:11px"><b>Title, brief, due date, campaign</b>the four things
+              only you can answer</div>
+          </div>
+          <div class="acts">
+            <button class="btn p" type="button">Send to Ira</button>
+            <button class="btn q" type="button">Save &amp; add another</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-wrap">
+        <h4>A team head creating a task</h4>
+        <div class="sheet">
+          <div class="s-h">
+            <div class="s-id">New task · Graphic</div>
+            <h3>What needs doing?</h3>
+          </div>
+          <div class="people">
+            <div class="per"><span class="av">IG</span><span><small>Assigned by</small><b>You — automatic</b></span></div>
+            <div class="per"><span class="av">MD</span><span><small>Assign to</small><b>Maya Designer ▾</b></span></div>
+          </div>
+          <div class="s-b">
+            <div class="waiting">You can allocate straight away, or leave it unassigned and pick someone
+              later from the board.</div>
+            <div class="zone" style="margin-top:11px"><b>Title, brief, due date, campaign</b>plus priority
+              and the person</div>
+          </div>
+          <div class="acts">
+            <button class="btn p" type="button">Save</button>
+            <button class="btn q" type="button">Save &amp; start work</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:20px;font-size:14.5px">Worth saying plainly: this is a <b>rule, not a hidden
+      field</b>. The server refuses an assignee from anyone who isn't a head or admin, so it holds even if
+      someone goes round the app. Members creating their own work get the same treatment — it goes to the
+      head to allocate.</p>
+
+    <div class="ask">
+      <h3>Before I build it</h3>
+      <ol>
+        <li>Does <b>Send for QC</b> read right to your team, or would you rather it said something else?</li>
+        <li>Should a task be blocked from going to QC with no file attached? Right now it can.</li>
+        <li>When a head submits their <em>own</em> work — straight to the assigner, or should it stop for
+          another head first?</li>
+        <li>A member creating a task for themselves: still head-allocated, or can they keep it?</li>
+        <li>Anything in the ··· list you'd rather keep on the surface?</li>
+      </ol>
+    </div>
+  </section>
+
+
+  <footer>Proposal only — nothing built · CreativeFlow v5.5.0 · panels are live HTML, resize to see them respond</footer>
+</div>
