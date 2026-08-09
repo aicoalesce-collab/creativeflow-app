@@ -12,3 +12,4 @@ One line per production deploy, appended automatically by `tools/deploy.ps1`.
 2026-08-09 12:11  v5.4.0  version 27  prod AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl  OK
 2026-08-09 15:44  v5.5.0  version 31  prod AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl  OK
 2026-08-09 22:25  v5.6.0  version 33  prod AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl  OK
+2026-08-09 23:08  v5.7.0  version 34  prod AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl  OK

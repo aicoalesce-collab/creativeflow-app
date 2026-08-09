@@ -6,7 +6,7 @@
 <title>CreativeFlow</title>
 <script>
 /* CF-BOOT — do not rename; serveApp_ rewrites these lines, exe+ping regex APP_VERSION */
-window.APP_VERSION = '5.6.0';
+window.APP_VERSION = '5.7.0';
 window.CF_INJECTED_API = '';
 window.CF_DEFAULT_API = 'https://script.google.com/macros/s/AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl/exec';
 window.CF_GUEST_TOKEN = '';
@@ -25,20 +25,28 @@ window.CF_OPEN_TASK = '';
 <link href="https://fonts.googleapis.com/css2?family=Doto:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f3f1ec; --card:#fbfaf7; --card2:#ffffff; --ink:#1b1b1b; --line:#e5e1d8;
-  --muted:#8a867c; --soft:#eceae3;
-  --accent:#eb5b2d; --accent-ink:#ffffff; --accent-soft:#fbe9e1;
-  --pill-line:#d8d4c9;
+  /* PASS 1 of the redesign — the token layer. Same variable names as before, so
+     every existing rule inherits the new look; only the values moved.
+     The rule that does the work: --accent means "this needs you" or "this is the
+     action", and NOTHING else. State has its own quiet set below. */
+  --bg:#faf9f6; --card:#ffffff; --card2:#ffffff; --ink:#17140f; --line:#e8e4da;
+  --muted:#8a8378; --soft:#f2efe8;
+  --accent:#e8502a; --accent-ink:#ffffff; --accent-soft:#fdeee9;
+  --pill-line:#d6d1c4;
+  /* state — deliberately not the accent, so a late row reads as late rather
+     than merely present */
+  --s-late:#b3341c; --s-review:#4f46b8; --s-good:#2b7a52; --s-hold:#9a9287;
   --radius:14px; --slot:46px;
   --font-dot:'Doto','Inter',system-ui,sans-serif; --font-b:'Inter',system-ui,sans-serif;
-  --shadow:0 1px 2px rgba(27,27,27,.05);
+  --shadow:0 1px 2px rgba(23,20,15,.05);
 }
 [data-theme="dark"]{
-  --bg:#141414; --card:#1d1d1d; --card2:#232323; --ink:#f2f0eb; --line:#2d2d2d;
-  --muted:#8f8d86; --soft:#282828;
-  --accent:#f06a38; --accent-ink:#141414; --accent-soft:#3a2419;
-  --pill-line:#3a3a3a;
-  --shadow:0 1px 2px rgba(0,0,0,.4);
+  --bg:#131211; --card:#1c1a18; --card2:#232120; --ink:#f4f1ea; --line:#2c2926;
+  --muted:#918a7e; --soft:#232120;
+  --accent:#f4653c; --accent-ink:#131211; --accent-soft:#3a2018;
+  --pill-line:#3a3631;
+  --s-late:#f0705a; --s-review:#8b83f0; --s-good:#5fb98a; --s-hold:#7d766c;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
@@ -142,8 +150,8 @@ a{color:var(--accent)}
 .kpi .lbl{font-size:9.5px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase;font-weight:700}
 .kpi .n{font-family:var(--font-dot);font-weight:900;font-size:30px;letter-spacing:.03em;line-height:1.15;font-variant-numeric:tabular-nums}
 .kpi .cap{font-size:11px;color:var(--muted);margin-top:2px}
-.kpi .cap.hot{color:var(--accent);font-weight:600}
-.kpi.alert .n{color:var(--accent)}
+.kpi .cap.hot{color:var(--s-late);font-weight:600}
+.kpi.alert .n{color:var(--s-late)}
 
 /* ── panels & chips ────────────────── */
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;margin-bottom:14px;box-shadow:var(--shadow)}
@@ -153,14 +161,14 @@ a{color:var(--accent)}
 .empty{color:var(--muted);font-size:12.5px;padding:8px 0}
 .chip{display:inline-block;border-radius:99px;padding:2.5px 10px;font-size:9.5px;font-weight:700;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase}
 .p-Urgent{background:var(--accent);color:var(--accent-ink)}
-.p-High{border:1px solid var(--accent);color:var(--accent)}
+.p-High{border:1px solid var(--pill-line);color:var(--ink)}
 .p-Medium{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
 .p-Low{border:1px solid var(--pill-line);color:var(--muted)}
 .s-chip{border:1px solid var(--pill-line);color:var(--muted)}
-.s-done{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
-.s-review{border:1px solid var(--accent);color:var(--accent)}
-.s-rejected{border:1px solid #c0392b;color:#c0392b}
-[data-theme="dark"] .s-rejected{border-color:#e07b6a;color:#e07b6a}
+.s-done{background:transparent;color:var(--s-good);border:1px solid var(--s-good)}
+.s-review{border:1px solid var(--s-review);color:var(--s-review)}
+.s-rejected{border:1px solid var(--s-late);color:var(--s-late)}
+
 .rvq{display:flex;align-items:center;gap:12px;padding:11px 8px;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:8px}
 .rvq:hover{background:var(--soft)}
 .rvq:last-child{border-bottom:none}
@@ -170,12 +178,12 @@ a{color:var(--accent)}
 .rvq-m{font-size:11px;color:var(--muted);margin-top:2px}
 .rvq-go{color:var(--muted)}
 #rv-ver{padding:7px 10px;border-radius:9px;font-size:12px}
-.od-chip{background:var(--accent);color:var(--accent-ink);animation:pulse 1.4s infinite}
+.od-chip{background:var(--s-late);color:#fff}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 .team-dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:6px;vertical-align:0}
 
 /* ── overdue strip ─────────────────── */
-.od-strip{background:var(--accent);color:var(--accent-ink);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.od-strip{background:var(--s-late);color:#fff;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .od-dot{width:9px;height:9px;border-radius:99px;background:var(--accent-ink);animation:pulse 1.4s infinite}
 .od-strip b{font-family:var(--font-dot);font-weight:900;letter-spacing:.08em;text-transform:uppercase;font-size:12.5px}
 .od-pill{background:rgba(255,255,255,.18);border-radius:99px;padding:4px 12px;font-size:11.5px;cursor:pointer}
@@ -189,12 +197,24 @@ a{color:var(--accent)}
 .trow{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
 .trow:last-child{border-bottom:none}
 .trow:hover{background:var(--soft)}
+/* One state vocabulary: a 3px bar you learn once and then never read a status
+   word again. Density varies with urgency — late is heavier, finished recedes. */
+.trow{border-left:3px solid transparent;padding-left:9px;transition:opacity .15s}
+.trow--late{border-left-color:var(--s-late)}
+.trow--review{border-left-color:var(--s-review)}
+.trow--now{border-left-color:var(--ink)}
+.trow--new{border-left-color:var(--muted)}
+.trow--hold{border-left-color:var(--pill-line)}
+.trow--done{border-left-color:var(--s-good);opacity:.55}
+.trow--done .tt{font-weight:500}
+.trow--done:hover{opacity:1}
+.trow--late .tt{font-weight:700}
 .trow .tid{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;width:56px;flex:none;letter-spacing:.03em}
 .trow .tt{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
 .trow .tt small{display:block;font-weight:500;color:var(--muted);font-size:10.5px;margin-top:1px}
-.trow .due{font-size:11px;color:var(--accent);white-space:nowrap;font-weight:600}
+.trow .due{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600}
 .trow .due.ok{color:var(--muted);font-weight:500}
-.trow .due.late{color:var(--accent);font-weight:700}
+.trow .due.late{color:var(--s-late);font-weight:700}
 
 table.tasks{width:100%;border-collapse:collapse}
 table.tasks th{font-size:9.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:700}
@@ -211,9 +231,10 @@ table.tasks tr.overdue-row td:first-child{box-shadow:inset 3px 0 0 var(--accent)
 .notif-item:last-child{border-bottom:none}
 .notif-item:hover{background:var(--soft);border-radius:8px}
 .notif-item .ni{width:30px;height:30px;border:1px solid var(--pill-line);border-radius:99px;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px}
-.notif-item.hot .ni{border-color:var(--accent);color:var(--accent)}
+.notif-item.hot .ni{border-color:var(--s-late);color:var(--s-late)}
+.notif-item.hot .dot{background:var(--s-late)}
 .notif-item .nt{color:var(--muted);font-size:10.5px;margin-top:2px}
-.notif-item .dot{width:7px;height:7px;border-radius:99px;background:var(--accent);flex:none;margin-top:5px}
+.notif-item .dot{width:7px;height:7px;border-radius:99px;background:var(--muted);flex:none;margin-top:5px}
 .mcal{width:100%;border-collapse:collapse;text-align:center;font-size:11px}
 .mcal th{color:var(--muted);font-weight:600;font-size:9.5px;letter-spacing:.08em;padding:4px 0}
 .mcal td{padding:2px 0}
@@ -242,8 +263,8 @@ table.tasks tr.overdue-row td:first-child{box-shadow:inset 3px 0 0 var(--accent)
 .cal-nav button:hover,.ghostbtn:hover{border-color:var(--accent);color:var(--accent)}
 .legend{margin-left:auto;display:flex;gap:12px;font-size:10.5px;color:var(--muted);align-items:center;flex-wrap:wrap;letter-spacing:.04em}
 .lg-dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:5px;vertical-align:-1px}
-.od-lane{background:var(--accent-soft);border:1px dashed var(--accent);border-radius:var(--radius);padding:10px 13px;margin-bottom:10px}
-.od-lane .lbl{font-size:9.5px;font-weight:700;color:var(--accent);letter-spacing:.12em;margin-bottom:8px;text-transform:uppercase}
+.od-lane{background:var(--accent-soft);border:1px dashed var(--s-late);border-radius:var(--radius);padding:10px 13px;margin-bottom:10px}
+.od-lane .lbl{font-size:9.5px;font-weight:700;color:var(--s-late);letter-spacing:.12em;margin-bottom:8px;text-transform:uppercase}
 .od-lane-items{display:flex;gap:8px;flex-wrap:wrap}
 .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;position:relative;box-shadow:var(--shadow)}
 .cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(116px,1fr));min-width:900px}

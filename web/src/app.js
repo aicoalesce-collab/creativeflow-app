@@ -882,8 +882,23 @@ function odStrip(tasks){
   return `<div class="od-strip"><span class="od-dot"></span><b>Overdue — act now</b>` +
     od.map(t=>`<span class="od-pill" onclick="openTaskModal('${t.id}')">${t.id} · ${esc(t.title)}${t.assignee?' — '+esc(t.assignee.split(' ')[0]):''}</span>`).join('') + `</div>`;
 }
+/** One state class per row, so the coloured bar means the same thing in every
+ *  list in the product. You learn it once and stop reading status words. */
+function rowState_(t){
+  if(isOverdue(t)) return 'late';
+  if(t.status === 'Done' || t.status === 'Rejected') return 'done';
+  if(t.status === 'In Review') return 'review';
+  if(t.status === 'On Hold') return 'hold';
+  if(t.status === 'Revisions') return 'late';   /* work that came back carries the same urgency */
+  if(t.status === 'In Progress') return 'now';
+  /* New still gets a bar. Nothing has started, but somebody has to pick it up —
+   * leaving it blank made the one row that needs a person recede furthest. */
+  return 'new';
+}
+
 function rowHtml(t, showStatus){
-  return `<div class="trow" onclick="openTaskModal('${t.id}')">
+  const st = rowState_(t);
+  return `<div class="trow${st ? ' trow--' + st : ''}" onclick="openTaskModal('${t.id}')">
     ${av(t.assignee, 26)}
     <span class="tt">${esc(t.title)}<small>${t.id} · ${tdot(t.team)}${esc(t.team)}${t.assignee? ' · '+esc(t.assignee.split(' ')[0]):''}</small></span>
     ${showStatus? schip(t) : pchip(t.priority)}
