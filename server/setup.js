@@ -33,7 +33,7 @@ function setup() {
   buildMaster_(ss);
   buildArchive_(ss);
   buildLog_(ss);
-  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_(); pushSheet_(); portfolioSheet_();
+  reviewsSheet_(); sharesSheet_(); cyclesSheet_(); versionsSheet_(); syncRegistrySheet_(); pushSheet_(); portfolioSheet_(); projectsSheet_(); projectNotesSheet_();
   buildTeamTabs_(ss);
   buildDashboard_(ss);
   rebuildMemberTabs();
@@ -239,7 +239,10 @@ function buildMaster_(ss) {
   const widths = { 1: 90, 2: 130, 3: 130, 4: 90, 5: 130, 6: 260, 7: 320, 8: 170, 9: 170, 10: 90, 11: 110, 12: 110, 13: 90, 14: 110, 15: 130, 16: 100, 17: 90, 18: 80, 19: 220 };
   Object.keys(widths).forEach(c => sh.setColumnWidth(Number(c), widths[c]));
   sh.hideColumns(COL.H_REMINDED, 3);
-  sh.hideColumns(X.STARTED, X_HEADERS.length);
+  /* X_HEADERS now ends with Project, which is USER data and must stay
+     visible — hide only the system block 23..30. */
+  sh.hideColumns(X.STARTED, X_HEADERS.length - 1);
+  sh.setColumnWidth(COL.PROJECT, 170);
 
   applyMasterConditionalFormatting_(sh);
 }
@@ -274,9 +277,11 @@ function buildArchive_(ss) {
   let sh = ss.getSheetByName(SHEETS.ARCHIVE);
   if (!sh) sh = ss.insertSheet(SHEETS.ARCHIVE);
   if (sh.getRange('A1').getValue() !== 'Task ID') {
-    sh.getRange(1, 1, 1, VISIBLE_COLS).setValues([HEADERS.slice(0, VISIBLE_COLS)]);
+    /* A..S plus the campaign: archiveDone and apiDelete_ both append that
+       width, and a 19-wide header would leave the column unlabelled. */
+    sh.getRange(1, 1, 1, ARCHIVE_PROJECT_COL).setValues([HEADERS.slice(0, VISIBLE_COLS).concat(['Project'])]);
   }
-  sh.getRange(1, 1, 1, VISIBLE_COLS).setFontWeight('bold').setBackground('#455a64').setFontColor('#ffffff');
+  sh.getRange(1, 1, 1, ARCHIVE_PROJECT_COL).setFontWeight('bold').setBackground('#455a64').setFontColor('#ffffff');
   sh.setFrozenRows(1);
 }
 
@@ -323,7 +328,7 @@ function applyProtections() {
   });
 
   // Master: lock everything except Status (K), Deliverable (I), Notes (S)
-  ['A:H', 'J:J', 'L:R', 'T:V', 'W:AD'].forEach(a1 => {
+  ['A:H', 'J:J', 'L:R', 'T:V', 'W:AE'].forEach(a1 => {
     try {
       const p = master.getRange(a1).protect().setDescription('Admins only');
       p.removeEditors(p.getEditors());
@@ -332,7 +337,7 @@ function applyProtections() {
   });
 
   // Whole-sheet protection for admin tabs and read-only mirrors
-  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS, SHEETS.PUSH, SHEETS.PORTFOLIO];
+  const lockSheets = [SHEETS.ROSTER, SHEETS.CONFIG, SHEETS.DASH, SHEETS.ARCHIVE, SHEETS.REVIEWS, SHEETS.SHARES, SHEETS.CYCLES, SHEETS.VERSIONS, SHEETS.PUSH, SHEETS.PORTFOLIO, SHEETS.PNOTES];
   ss.getSheets().forEach(sh => {
     const n = sh.getName();
     if (lockSheets.indexOf(n) !== -1 || n.indexOf(MEMBER_TAB_PREFIX) === 0 || n.indexOf(TEAM_TAB_SUFFIX) !== -1) {

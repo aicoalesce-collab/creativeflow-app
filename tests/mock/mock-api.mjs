@@ -82,6 +82,7 @@ function load() {
       startedAt: t.startedOffsetDays == null ? null : day(t.startedOffsetDays, '11:00').toISOString(),
       stage: t.stage || '', qcRounds: t.qcRounds || 0, reviewDays: t.reviewDays || 0,
       flags: t.flags || '', renewedFrom: t.renewedFrom || '', briefPending: !!t.briefPending,
+      project: t.project || '',
     };
   });
   const reviews = rawReviews.map(r => ({ ...r, created: day(r.createdOffsetDays, '12:00').toISOString() }));
@@ -94,7 +95,10 @@ function load() {
       versions[t.id].push({ v, link: t.deliverable, by: t.assignee || t.requester, at: t.created, fileId: (t.deliverable.match(/\/d\/([-\w]{20,})/) || [])[1] || '', expires: '' });
     }
   });
-  state = { roster, tasks, reviews, shares, versions, nextReview: 7, push: [] };
+  state = { roster, tasks, reviews, shares, versions, nextReview: 7, push: [],
+    projects: [{ name: 'Great White Launch', status: 'Active', client: 'Great White', colour: '#eb5b2d' },
+               { name: 'Project 101', status: 'Active', client: '', colour: '#5b5bd6' }],
+    pnotes: [], nextNote: 1 };
   outbox = [];
   mailQuotaLeft = MAIL_QUOTA;
   timedOutOnce = false;
@@ -252,6 +256,7 @@ function createTask(u, req, quiet) {
   const t = {
     id, requester: u.name, team, assignee, title,
     desc: String(req.desc || ''), brief: String(req.brief || ''), deliverable: '',
+    project: String(req.project || '').trim().slice(0, 80),
     priority: PRIORITIES.includes(String(req.priority)) ? String(req.priority) : 'Medium',
     status: 'New', notes: '', revisions: 0,
     created: nowIso(), completed: null,
@@ -678,7 +683,7 @@ function portfolioRows() {
       // the mock has no Drive, so only tasks the fixtures marked as captured
       // carry a "permanent still"; the rest fall back to the live link
       thumb: /1MenuCard|1Standee/.test(t.deliverable) ? 'https://drive.google.com/thumbnail?id=mockstill&sz=w800' : '',
-      link: t.deliverable,
+      link: t.deliverable, project: t.project || '',
       kind: /youtube|youtu\.be/.test(t.deliverable) ? 'yt'
         : /\/d\/[-\w]{20,}/.test(t.deliverable) ? 'drive'
         : /\.(png|jpe?g|gif|webp)(\?|#|$)/i.test(t.deliverable) ? 'img' : 'link',
@@ -689,8 +694,10 @@ function gallery(u, req) {
   const page = Math.max(0, Math.floor(Number(req.page) || 0));
   const scope = String(req.scope || 'team');
   const wantTeam = String(req.team || '').trim();
+  const wantProject = String(req.project || '').trim();
 
   let rows = portfolioRows();
+  if (wantProject) rows = rows.filter(r => String(r.project).toLowerCase() === wantProject.toLowerCase());
   if (u.role === 'Super Admin') {
     if (wantTeam) rows = rows.filter(r => r.team === wantTeam);
     if (scope === 'mine') rows = rows.filter(r => r.assignee === u.name);
@@ -712,6 +719,124 @@ function gallery(u, req) {
   };
 }
 
+
+/* ── projects / campaigns ───────────────────────────────────────────────── */
+function scopedRaw(u) {
+  if (u.role === "Super Admin") return state.tasks;
+  if (u.role === "Team Head") return state.tasks.filter(t => t.team === u.team);
+  if (u.role === "Assigner") return state.tasks.filter(t => t.requester === u.name);
+  return state.tasks.filter(t => t.assignee === u.name);
+}
+const PROJECT_COLOURS = ["#eb5b2d", "#5b5bd6", "#0f9d58", "#b7950b", "#8e44ad", "#e91e63", "#00897b", "#e67e22"];
+
+function projects(u) {
+  const now = Date.now();
+  const blank = () => ({ total: 0, open: 0, overdue: 0, inReview: 0, done: 0 });
+  const bucket = {};
+  state.projects.forEach(p => { bucket[p.name.toLowerCase()] = blank(); });
+  scopedRaw(u).forEach(t => {
+    const name = String(t.project || "").trim();
+    if (!name) return;
+    const b = (bucket[name.toLowerCase()] = bucket[name.toLowerCase()] || blank());
+    const closed = t.status === "Done" || t.status === "Rejected";
+    b.total++;
+    if (!closed) {
+      b.open++;
+      if (t.status === "In Review") b.inReview++;
+      else if (t.status !== "On Hold" && t.dueMs && t.dueMs < now) b.overdue++;
+    }
+    if (t.status === "Done") b.done++;
+  });
+  const seen = {};
+  const out = state.projects.map((p, i) => {
+    seen[p.name.toLowerCase()] = true;
+    return { name: p.name, status: p.status || "Active", client: p.client || "",
+      colour: p.colour || PROJECT_COLOURS[i % PROJECT_COLOURS.length], starts: "", ends: "",
+      onSheet: true, counts: bucket[p.name.toLowerCase()] || blank() };
+  });
+  scopedRaw(u).forEach(t => {
+    const name = String(t.project || "").trim();
+    if (!name || seen[name.toLowerCase()]) return;
+    seen[name.toLowerCase()] = true;
+    out.push({ name, status: "Active", client: "", colour: PROJECT_COLOURS[out.length % PROJECT_COLOURS.length],
+      starts: "", ends: "", onSheet: false, counts: bucket[name.toLowerCase()] });
+  });
+  const mine = ["Super Admin", "Team Head"].includes(u.role) ? out : out.filter(p => p.counts.total > 0);
+  mine.sort((a, b) => (b.counts.open - a.counts.open) || (b.counts.total - a.counts.total) || a.name.localeCompare(b.name));
+  return { ok: true, projects: mine };
+}
+
+function projectCreate(u, req) {
+  if (!["Super Admin", "Team Head", "Assigner"].includes(u.role)) {
+    return { ok: false, error: "FORBIDDEN", message: "Members cannot start a campaign — ask your team head." };
+  }
+  const name = String(req.name || "").trim().slice(0, 80);
+  if (name.length < 2) return { ok: false, error: "VALIDATION", message: "Give the campaign a name." };
+  if (state.projects.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    return { ok: false, error: "VALIDATION", message: "There is already a campaign called “" + name + "”." };
+  }
+  const colour = PROJECT_COLOURS[state.projects.length % PROJECT_COLOURS.length];
+  const p = { name, status: "Active", client: String(req.client || "").trim(), colour };
+  state.projects.push(p);
+  return { ok: true, project: { ...p, starts: "", ends: "", onSheet: true, counts: { total: 0, open: 0, overdue: 0, inReview: 0, done: 0 } } };
+}
+
+function projectUpdate(u, req) {
+  if (!["Super Admin", "Team Head", "Assigner"].includes(u.role)) {
+    return { ok: false, error: "FORBIDDEN", message: "Only heads, admins and assigners can change a campaign." };
+  }
+  const p = state.projects.find(x => x.name.toLowerCase() === String(req.name || "").toLowerCase());
+  if (!p) return { ok: false, error: "NOT_FOUND", message: "No such campaign." };
+  const patch = req.patch || {};
+  if (patch.status !== undefined) {
+    if (!["Active", "On Hold", "Done"].includes(String(patch.status))) {
+      return { ok: false, error: "VALIDATION", message: "Status must be Active, On Hold or Done." };
+    }
+    p.status = String(patch.status);
+  }
+  if (patch.client !== undefined) p.client = String(patch.client);
+  return { ok: true };
+}
+
+function canSeeProject(u, name) {
+  if (["Super Admin", "Team Head"].includes(u.role)) return true;
+  const want = String(name || "").trim().toLowerCase();
+  return scopedRaw(u).some(t => String(t.project || "").trim().toLowerCase() === want);
+}
+const NOTE_PREVIEW = 600;
+
+function projectNotes(u, req) {
+  const name = String(req.project || "").trim().toLowerCase();
+  if (!name) return { ok: false, error: "VALIDATION", message: "Which campaign?" };
+  if (!canSeeProject(u, name)) return { ok: false, error: "FORBIDDEN", message: "That campaign is outside your work." };
+  const notes = state.pnotes.filter(n => n.project.toLowerCase() === name)
+    .sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  const page = notes.slice(0, 30).map(n => n.text.length <= NOTE_PREVIEW ? n
+    : { id: n.id, author: n.author, created: n.created, text: n.text.slice(0, NOTE_PREVIEW), more: true });
+  return { ok: true, notes: page, total: notes.length };
+}
+
+function projectNoteAdd(u, req) {
+  const project = String(req.project || "").trim();
+  const text = String(req.text || "").trim().slice(0, 4000);
+  if (!project) return { ok: false, error: "VALIDATION", message: "Which campaign?" };
+  if (!text) return { ok: false, error: "VALIDATION", message: "Write something first." };
+  const note = { id: "PN-" + String(state.nextNote++).padStart(5, "0"), project, author: u.name, text, created: nowIso() };
+  state.pnotes.push(note);
+  return { ok: true, note };
+}
+
+function projectNoteDel(u, req) {
+  const i = state.pnotes.findIndex(n => n.id === String(req.id || ""));
+  if (i === -1) return { ok: false, error: "NOT_FOUND", message: "That note is already gone." };
+  const n = state.pnotes[i];
+  if (n.author !== u.name && !["Super Admin", "Team Head"].includes(u.role)) {
+    return { ok: false, error: "FORBIDDEN", message: "You can only remove your own notes." };
+  }
+  state.pnotes.splice(i, 1);
+  return { ok: true, deletedId: n.id };
+}
+
 /* ── router + HTTP plumbing
  ────────────────────────────────────────────── */
 
@@ -724,6 +849,12 @@ function route(req) {
   const AUTHED = {
     bootstrap: () => bootstrap(u, req),
     gallery: () => gallery(u, req),
+    projects: () => projects(u),
+    projectCreate: () => projectCreate(u, req),
+    projectUpdate: () => projectUpdate(u, req),
+    projectNotes: () => projectNotes(u, req),
+    projectNoteAdd: () => projectNoteAdd(u, req),
+    projectNoteDel: () => projectNoteDel(u, req),
     pushSubscribe: () => pushSubscribe(u, req),
     pushUnsubscribe: () => pushUnsubscribe(u, req),
     tasks: () => ({ ok: true, tasks: scoped(u), serverTime: nowIso(), __big: true }),

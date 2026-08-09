@@ -74,6 +74,7 @@ function taskToApiFull_(r) {
     flags: String(r[X.FLAGS - 1] || ''),
     renewedFrom: String(r[X.RENEWED_FROM - 1] || ''),
     briefPending: String(r[X.BRIEF_PENDING - 1] || '') === 'Yes',
+    project: String(r[COL.PROJECT - 1] || '').trim(),
   };
 }
 
@@ -177,6 +178,8 @@ function apiCreate_(user, req) {
     'New', due.dateCell, due.timeCell,
   ]]);
   master.getRange(row, COL.REVISIONS, 1, 2).setValues([[0, '']]);
+  const proj = String(req.project || '').trim().slice(0, 80);
+  if (proj) master.getRange(row, COL.PROJECT).setValue(proj);
 
   let info;
   if (BULK_QUIET) {
@@ -218,7 +221,9 @@ function apiDelete_(user, req) {
 
   const stamp = '[DELETED by ' + user.name + ' on ' + Utilities.formatDate(new Date(), tzStr_(), 'dd MMM yyyy HH:mm') + '] ';
   cur[COL.NOTES - 1] = stamp + String(cur[COL.NOTES - 1] || '');
-  ss.getSheetByName(SHEETS.ARCHIVE).appendRow(cur);
+  /* Same width archiveDone uses (sweep.js): A..S + the campaign. Appending 19
+     here would leave every deleted task blank in a column its neighbours fill. */
+  ss.getSheetByName(SHEETS.ARCHIVE).appendRow(cur.concat([String(fullRow_(master, row)[COL.PROJECT - 1] || '').trim()]));
   master.deleteRow(row);
   log_('api-delete', id, user.email, String(cur[COL.TITLE - 1]), true);
   return { ok: true, deletedId: id };
@@ -277,6 +282,15 @@ function apiUpdate_(user, req) {
     if (a && a !== curAssignee) { notifyAssignee_(master, row, 'assigned'); notes.push('assignment alert emailed to ' + a); }
   }
   if ((manage || isReqA) && p.priority !== undefined) master.getRange(row, COL.PRIORITY).setValue(String(p.priority));
+  /* Anyone who can edit the task can file it under a campaign — that is
+     organising, not deciding, and blocking it would just leave work unfiled. */
+  if (p.project !== undefined) {
+    const np = String(p.project).trim().slice(0, 80);
+    if (np !== String(cur[COL.PROJECT - 1] || '').trim()) {
+      master.getRange(row, COL.PROJECT).setValue(np);
+      notes.push(np ? 'filed under ' + np : 'removed from its campaign');
+    }
+  }
   if ((manage || isReqA) && p.brief !== undefined) {
     const newBrief = String(p.brief);
     master.getRange(row, COL.BRIEF).setValue(newBrief);

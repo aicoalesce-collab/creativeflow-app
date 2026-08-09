@@ -54,6 +54,11 @@ let bootTab_ = '';   // a tab restored from the URL hash, consumed by enterApp
    hoist; `let` does not. */
 let assignerPick = '';
 let gal = { items: [], next: null, total: 0, loading: false, scope: 'team', team: '', loaded: false };
+let projects = [];
+let projLoaded = false, projLoading = false;
+let projPick = '', projSub = 'overview';
+let pgal = { items: [], next: null, total: 0, loading: false, loaded: false };
+let projNotes = { items: [], loaded: false, loading: false };
 let weekOffset = 0;
 let myTab = 'today';
 let mcalOffset = 0;
@@ -679,6 +684,7 @@ const TAB_DEFS_FULL = [
   {id:'overview', ic:'▦', label:'Dashboard'},
   {id:'tasks', ic:'☰', label:'Tasks'},
   {id:'review', ic:'◉', label:'Review'},
+  {id:'projects', ic:'◳', label:'Projects'},
   {id:'gallery', ic:'▨', label:'Gallery'},
   {id:'calendar', ic:'▤', label:'Calendar'},
   {id:'reports', ic:'◔', label:'Reports'},
@@ -686,6 +692,7 @@ const TAB_DEFS_FULL = [
 const TAB_DEFS_ASSIGNER = [
   {id:'review', ic:'◉', label:'Review'},
   {id:'tasks', ic:'☰', label:'My tasks'},
+  {id:'projects', ic:'◳', label:'Projects'},
   {id:'gallery', ic:'▨', label:'Gallery'},
   {id:'calendar', ic:'▤', label:'Assign'},
   {id:'reports', ic:'◔', label:'Reports'},
@@ -715,7 +722,7 @@ function renderNav(){
   const tb = $('#tabbar');
   if(tb){
     const items = TAB_DEFS_().map(x=>`<button class="tb ${tab===x.id?'active':''}" data-tab="${x.id}"><span class="ic">${x.ic}</span>${x.label}${x.id==='overview'&&odCount? `<span class="nb">${odCount}</span>` : x.id==='review'&&rvCount? `<span class="nb">${rvCount}</span>`:''}</button>`);
-    items.splice(2, 0, `<button class="tb tb-new" aria-label="New task" onclick="openNewTaskModal()"><span class="plus">＋</span></button>`);
+    items.splice(2, 0, `<button class="tb tb-new" aria-label="Add" onclick="openAddPill()"><span class="plus">＋</span></button>`);
     /* minmax(0,1fr), not 1fr: a plain 1fr track refuses to shrink below its
        content, so at seven tabs the bar ran off the side of the phone. */
     tb.style.gridTemplateColumns = 'repeat(' + items.length + ',minmax(0,1fr))';
@@ -1365,8 +1372,14 @@ async function assignTask(id, name){
   }
 }
 
-function openNewTaskModal(){
+function openNewTaskModal(preProject){
+  closeAddPill();
   const dflt = new Date(Date.now()+2*DAY);
+  /* The campaign list is normally already loaded; fetch it quietly if the
+     dialog is the first thing opened after a cold start. */
+  if(!projLoaded && !projLoading) loadProjects(false);
+  const pre = typeof preProject === 'string' ? preProject : '';
+  const canProject = isHead() || isAdmin() || isAssigner();
   $('#overlay').innerHTML = `<div class="modal" role="dialog" aria-modal="true">
     <h2>＋ NEW TASK</h2><div class="msub">Anyone can add a task — it goes straight into the master sheet. Leave "Assign to" empty and the team head will allocate it.</div>
     <div class="fgrid">
@@ -1378,6 +1391,18 @@ function openNewTaskModal(){
 
       <div class="field"><label>Assign to (optional)</label><select id="n-assignee"><option value="">Let the team head decide</option>${state.roster.filter(m=>m.role!=='Super Admin').map(m=>`<option value="${esc(m.name)}" data-team="${esc(m.team)}">${esc(m.name)} — ${esc(m.team)}</option>`).join('')}</select></div>
       <div class="field"><label>Brief / asset link</label><input id="n-brief" placeholder="drive.google.com/…"></div>
+      <div class="field f-full"><label>Campaign <span style="font-weight:400;text-transform:none;letter-spacing:0">· optional</span></label>
+        <div style="display:flex;gap:8px">
+          <select id="n-project" style="flex:1"><option value="">— none —</option>${(projects||[]).map(p=>`<option ${pre===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}${pre && !(projects||[]).some(p=>p.name===pre) ? `<option selected>${esc(pre)}</option>` : ''}</select>
+          ${canProject ? `<button class="btn btn-g" style="flex:none" onclick="toggleInlineProject()" title="Start a new campaign without leaving this box">＋ New</button>` : ''}
+        </div>
+        <div id="np-inline" style="display:none;margin-top:8px;gap:8px">
+          <div style="display:flex;gap:8px">
+            <input id="np-inline-name" placeholder="New campaign name" maxlength="80" style="flex:1">
+            <button class="btn btn-p" style="flex:none" onclick="createProject(true)">Create</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-g" onclick="closeModal()">Cancel</button>
@@ -1387,6 +1412,13 @@ function openNewTaskModal(){
     </div></div>`;
   $('#overlay').classList.add('open');
 }
+function toggleInlineProject(){
+  const box = document.getElementById('np-inline'); if(!box) return;
+  const on = box.style.display === 'none';
+  box.style.display = on ? 'block' : 'none';
+  if(on){ const i = document.getElementById('np-inline-name'); if(i) i.focus(); }
+}
+
 async function createTask(btn, mode){
   const g = i => document.getElementById(i);
   const title = g('n-title').value.trim();
@@ -1401,6 +1433,7 @@ async function createTask(btn, mode){
     setSync('busy','SAVING…');
     const j = await api('createTask', {
       team, assignee, title, desc: g('n-desc').value, brief: g('n-brief').value,
+      project: (g('n-project')||{}).value || '',
       priority: g('n-priority').value, dueDate: g('n-due').value, dueTime: '18:00',
     });
     upsert(j.task); state.lastSync=new Date(); setSync('');
@@ -2581,7 +2614,7 @@ function renderContent(){
   /* the boot hash restore runs before we know who is signed in, so a member
      cold-starting #assigners would otherwise render a tab they cannot have */
   if(tab==='assigners' && !(isHead() || isAdmin())) tab = 'overview';
-  const v = { overview:viewOverview, tasks:viewTasks, review:viewReview, calendar:viewCalendar, reports:viewReports, gallery:viewGallery, assigners:viewAssigners }[tab] || viewOverview;
+  const v = { overview:viewOverview, tasks:viewTasks, review:viewReview, calendar:viewCalendar, reports:viewReports, gallery:viewGallery, assigners:viewAssigners, projects:viewProjects }[tab] || viewOverview;
   $('#content').innerHTML = v();
   if(tab==='calendar') bindCalendarDrag();
   if(tab==='overview'){ const box = document.getElementById('ov-notifs'); if(box) bindNotifClicks(box, notifs()); }
@@ -2636,7 +2669,7 @@ document.addEventListener('visibilitychange', ()=>{ if(state.me && document.visi
    role, so an id someone is not entitled to is corrected a moment later. */
 (function(){
   const h = location.hash.slice(1);
-  if(h && ['overview','tasks','review','gallery','assigners','calendar','reports'].indexOf(h) > -1) { tab = h; bootTab_ = h; }
+  if(h && ['overview','tasks','review','projects','gallery','assigners','calendar','reports'].indexOf(h) > -1) { tab = h; bootTab_ = h; }
 })();
 const __rvQS = new URLSearchParams(location.search);
 /* short route: #/r/<token>[?api=…] — checked before the legacy ?review= form */
@@ -2700,11 +2733,13 @@ if(__rvTok){
  ['bulkRows', v => (bulkRows = v), () => bulkRows],
  ['reportScope', v => (reportScope = v), () => reportScope],
  ['assignerPick', v => (assignerPick = v), () => assignerPick],
+ ['projPick', v => (projPick = v), () => projPick],
+ ['projSub', v => (projSub = v), () => projSub],
  ['teamStats', v => (teamStats = v), () => teamStats],
 ].forEach(([name, set, get]) => {
   Object.defineProperty(window, name, { get, set, configurable: true });
 });
-Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest, viewGallery, viewAssigners, setAssigner, assignerList_, setGalScope, setGalTeam, loadGallery, openGalleryItem, galImgFail });
+Object.assign(window, { state, store, STATUSES, PRIORITIES, setReportScope, canStartOwn_, rvCanAnnotate, statTile_, teamCombinedHtml, scopeSwitchHtml, canSeeTeamReport, periodDays_, togglePush, refreshPushState_, openTaskFromRoute_, openNotifPanel_, clearNotifLog_, refreshNotifLog_, logAddForTest, viewGallery, viewAssigners, setAssigner, assignerList_, viewProjects, loadProjects, openProject, closeProject, setProjSub, setProjStatus, openNewProjectModal, createProject, addProjNote, delProjNote, openAddPill, closeAddPill, toggleInlineProject, setGalScope, setGalTeam, loadGallery, openGalleryItem, galImgFail });
 
 /* ═══════════ ASSIGNERS ═══════════
    Who asked for what. Assigners sit outside the Graphic/Video teams — they are
@@ -2848,10 +2883,10 @@ function galThumb_(it){
   return '';
 }
 
-function galCard_(it, i){
+function galCard_(it, i, from){
   const src = galThumb_(it);
   const who = it.assignee || it.requester || '';
-  return `<figure class="g-card" onclick="openGalleryItem(${i})" title="${esc(it.title)}">
+  return `<figure class="g-card" onclick="openGalleryItem(${i}, ${esc(JSON.stringify(from || 'gal'))})" title="${esc(it.title)}">
       ${src ? `<img src="${esc(src)}" alt="${esc(it.title)}" loading="lazy" onerror="galImgFail(this)">`
             : `<div class="g-noimg"><span class="g-ic">${it.kind === 'link' ? '🔗' : '📄'}</span><span>no preview</span></div>`}
       <figcaption class="g-meta">
@@ -2868,8 +2903,9 @@ function galImgFail(img){
   img.outerHTML = `<div class="g-noimg"><span class="g-ic">🖼</span><span>preview unavailable</span></div>`;
 }
 
-function openGalleryItem(i){
-  const it = gal.items[i]; if(!it) return;
+function openGalleryItem(i, from){
+  const list = (from === 'pgal' ? pgal : gal).items || [];
+  const it = list[i]; if(!it) return;
   if(state.tasks.some(t => t.id === it.id)){ openTaskModal(it.id); return; }
   if(it.link) window.open(it.link, '_blank', 'noopener');   // archived out of the board
 }
@@ -2900,6 +2936,342 @@ function viewGallery(){
     (gal.next != null
       ? `<div style="text-align:center;margin:18px 0"><button class="btn btn-g" onclick="loadGallery(true)"${gal.loading?' disabled':''}>${gal.loading?'Loading…':'Show more'}</button></div>`
       : `<div class="g-end">That's everything.</div>`);
+}
+
+
+/* ═══════════ PROJECTS / CAMPAIGNS ═══════════
+   A campaign is a folder for work: the Diwali launch, a product film, an event.
+   Pick one and you get its own small workspace — the numbers, its tasks, the
+   finished pieces, and a running note feed — instead of hunting for the same
+   campaign across five other screens. */
+
+async function loadProjects(force){
+  if(projLoading) return;
+  if(projLoaded && !force) return;
+  projLoading = true;
+  try{
+    const j = await api('projects', {});
+    projects = j.projects || [];
+    projLoaded = true;
+  }catch(err){ toast('Could not load campaigns — ' + esc(err.message), true); }
+  projLoading = false;
+  renderContent();
+}
+
+function projByName_(name){
+  return (projects || []).find(p => p.name.toLowerCase() === String(name || '').toLowerCase()) || null;
+}
+function projTasks_(name){
+  const want = String(name || '').toLowerCase();
+  return (state.tasks || []).filter(t => String(t.project || '').toLowerCase() === want);
+}
+function projColour_(name){
+  const p = projByName_(name);
+  return p ? p.colour : 'var(--muted)';
+}
+
+function openProject(name){
+  projPick = name; projSub = 'overview';
+  pgal = { items: [], next: null, total: 0, loading: false, loaded: false };
+  projNotes = { items: [], loaded: false, loading: false };
+  renderContent();
+}
+function closeProject(){ projPick = ''; renderContent(); }
+function setProjSub(v){
+  projSub = v;
+  if(v === 'gallery' && !pgal.loaded) loadProjGallery();
+  else if(v === 'notes' && !projNotes.loaded) loadProjNotes();
+  else renderContent();
+}
+
+async function loadProjGallery(){
+  if(pgal.loading) return;
+  pgal.loading = true; renderContent();
+  try{
+    const j = await api('gallery', { page: 0, scope: 'team', project: projPick });
+    pgal.items = j.items || []; pgal.total = j.total || 0; pgal.next = j.next;
+  }catch(err){ toast('Could not load this campaign’s work — ' + esc(err.message), true); }
+  pgal.loaded = true; pgal.loading = false; renderContent();
+}
+
+async function loadProjNotes(){
+  if(projNotes.loading) return;
+  projNotes.loading = true; renderContent();
+  try{
+    const j = await api('projectNotes', { project: projPick });
+    projNotes.items = j.notes || [];
+  }catch(err){ toast('Could not load notes — ' + esc(err.message), true); }
+  projNotes.loaded = true; projNotes.loading = false; renderContent();
+}
+
+async function addProjNote(btn){
+  const ta = document.getElementById('pn-text');
+  const text = ta ? ta.value.trim() : '';
+  if(!text){ toast('Write something first.', true); return; }
+  if(btn) btn.disabled = true;
+  try{
+    const j = await api('projectNoteAdd', { project: projPick, text });
+    projNotes.items.unshift(j.note);
+    if(ta) ta.value = '';
+    renderContent();
+  }catch(err){ toast('Could not save the note — ' + esc(err.message), true); }
+  if(btn) btn.disabled = false;
+}
+
+async function delProjNote(id, btn){
+  if(btn && !btn.dataset.armed){
+    btn.dataset.armed = '1'; btn.textContent = 'sure?';
+    setTimeout(()=>{ if(btn && btn.dataset){ btn.dataset.armed=''; btn.textContent='✕'; } }, 3000);
+    return;
+  }
+  try{
+    await api('projectNoteDel', { id });
+    projNotes.items = projNotes.items.filter(n => n.id !== id);
+    renderContent();
+  }catch(err){ toast('Could not remove it — ' + esc(err.message), true); }
+}
+
+async function setProjStatus(v){
+  const name = projPick;
+  try{
+    await api('projectUpdate', { name, patch: { status: v } });
+    const p = projByName_(name); if(p) p.status = v;
+    toast('Campaign marked ' + esc(v) + '.');
+    renderContent();
+  }catch(err){ toast('Could not update — ' + esc(err.message), true); }
+}
+
+/** Create a campaign from the pill, the tab, or the new-task dialog. */
+async function createProject(fromModal){
+  const el = document.getElementById(fromModal ? 'np-inline-name' : 'np-name');
+  const name = el ? el.value.trim() : '';
+  if(name.length < 2){ toast('Give the campaign a name.', true); if(el) el.focus(); return; }
+  try{
+    const j = await api('projectCreate', { name, client: (document.getElementById('np-client')||{}).value || '' });
+    projects.push(j.project);
+    projLoaded = true;
+    toast('Campaign “' + esc(name) + '” created.');
+    if(fromModal){
+      /* fold the inline form away and select the new campaign on the task */
+      const sel = document.getElementById('n-project');
+      if(sel){
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name; sel.appendChild(o); sel.value = name;
+      }
+      const box = document.getElementById('np-inline'); if(box) box.style.display = 'none';
+    } else {
+      closeModal();
+      openProject(name);
+    }
+  }catch(err){ toast(esc(err.message), true); }
+}
+
+function openNewProjectModal(){
+  closeAddPill();
+  $('#overlay').innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+    <h2>New campaign</h2>
+    <div class="msub">Group a set of tasks — a launch, a film, an event — so they can be tracked together.</div>
+    <div class="fgrid">
+      <div class="field f-full"><label>Campaign name</label><input id="np-name" placeholder="Great White Launch" maxlength="80"></div>
+      <div class="field f-full"><label>Client <span style="font-weight:400;text-transform:none;letter-spacing:0">· optional</span></label><input id="np-client" placeholder="Great White Electricals" maxlength="80"></div>
+    </div>
+    <div class="mact"><button class="btn btn-g" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-p" onclick="createProject(false)">Create campaign</button></div>
+  </div>`;
+  $('#overlay').classList.add('open');
+  const i = document.getElementById('np-name'); if(i) i.focus();
+}
+
+/* ── the campaign list ── */
+
+function projCardHtml_(p){
+  const pct = p.counts.total ? Math.round((p.counts.done / p.counts.total) * 100) : 0;
+  return `<button class="pj-card" onclick="openProject(${esc(JSON.stringify(p.name))})">
+      <span class="pj-bar" style="background:${esc(p.colour)}"></span>
+      <span class="pj-body">
+        <span class="pj-top">
+          <span class="pj-name">${esc(p.name)}</span>
+          ${p.status !== 'Active' ? `<span class="chip">${esc(p.status)}</span>` : ''}
+        </span>
+        ${p.client ? `<span class="pj-client">${esc(p.client)}</span>` : ''}
+        <span class="pj-stats">
+          <b>${p.counts.open}</b> open
+          ${p.counts.overdue ? `<span class="pj-od">⚠ ${p.counts.overdue} overdue</span>` : ''}
+          <span class="pj-done">${p.counts.done}/${p.counts.total} done</span>
+        </span>
+        <span class="pj-track"><span class="pj-fill" style="width:${pct}%;background:${esc(p.colour)}"></span></span>
+      </span>
+    </button>`;
+}
+
+function viewProjectList_(){
+  const canAdd = isHead() || isAdmin() || isAssigner();
+  if(!projLoaded && !projLoading) loadProjects(false);
+  if(projLoading && !projects.length) return `<div class="panel"><div class="empty">Loading campaigns…</div></div>`;
+
+  const unfiled = (state.tasks || []).filter(t => !String(t.project || '').trim() && !isClosed(t)).length;
+
+  if(!projects.length){
+    return `<div class="panel"><div class="empty">No campaigns yet.<br>
+      <span style="color:var(--muted)">A campaign groups tasks that belong together — a launch, a film, an event.</span>
+      ${canAdd ? `<div style="margin-top:16px"><button class="btn btn-p" onclick="openNewProjectModal()">＋ New campaign</button></div>` : ''}</div></div>`;
+  }
+
+  return `<div class="pj-head">
+      <span class="g-count">${projects.length} campaign${projects.length===1?'':'s'}</span>
+      ${canAdd ? `<button class="btn btn-p" onclick="openNewProjectModal()">＋ New campaign</button>` : ''}
+    </div>
+    <div class="pj-grid">${projects.map(projCardHtml_).join('')}</div>
+    ${unfiled ? `<div class="pj-unfiled">${unfiled} open task${unfiled===1?'':'s'} ${unfiled===1?'is':'are'} not in a campaign yet — open a task and pick one under <b>Campaign</b>.</div>` : ''}`;
+}
+
+/* ── one campaign ── */
+
+function projOverviewHtml_(p, ts){
+  const open = ts.filter(t => !isClosed(t));
+  const soon = open.filter(t => t.due).sort((a,b) => a.due - b.due).slice(0, 5);
+  const people = {};
+  open.forEach(t => { const w = t.assignee || '—'; people[w] = (people[w] || 0) + 1; });
+  const roster = Object.keys(people).sort((a,b) => people[b] - people[a]);
+  const pct = p.counts.total ? Math.round((p.counts.done / p.counts.total) * 100) : 0;
+
+  return `<div class="panel">
+      <div class="kpis" style="margin-bottom:16px">
+        ${statTile_('Open', p.counts.open)}
+        ${statTile_('Overdue', p.counts.overdue)}
+        ${statTile_('In review', p.counts.inReview)}
+        ${statTile_('Done', p.counts.done, 'of ' + p.counts.total)}
+      </div>
+      <div class="pj-track" style="height:8px"><span class="pj-fill" style="width:${pct}%;background:${esc(p.colour)}"></span></div>
+      <div class="hint" style="margin-top:8px">${pct}% of this campaign is finished.</div>
+    </div>
+    <div class="ov-grid">
+      <div class="panel">
+        <div class="p-h"><h3>Next deadlines</h3></div>
+        ${soon.length ? soon.map(t => rowHtml(t, true)).join('') : '<div class="empty">Nothing scheduled.</div>'}
+      </div>
+      <div class="panel">
+        <div class="p-h"><h3>Who's on it</h3></div>
+        ${roster.length ? roster.map(nm => `<div class="trow" style="cursor:default">
+            ${av(nm, 26)}<span class="tt">${esc(nm)}</span>
+            <span class="due ok">${people[nm]} open</span></div>`).join('')
+          : '<div class="empty">Nobody has open work here.</div>'}
+      </div>
+    </div>`;
+}
+
+function projTasksHtml_(ts){
+  if(!ts.length) return `<div class="panel"><div class="empty">No tasks in this campaign yet.<br>
+    <span style="color:var(--muted)">Use <b>＋ Add task</b> above and it will be filed here automatically.</span></div></div>`;
+  const sorted = ts.slice().sort((a,b) => {
+    const ac = isClosed(a) ? 1 : 0, bc = isClosed(b) ? 1 : 0;
+    if(ac !== bc) return ac - bc;
+    return (a.due ? a.due.getTime() : Infinity) - (b.due ? b.due.getTime() : Infinity);
+  });
+  const td = (v, extra) => `<td style="padding:7px 10px;border-bottom:1px solid var(--line);${extra||''}">${v}</td>`;
+  return `<div class="panel">
+    <div class="tbl-wrap" style="overflow-x:auto"><table class="tasks"><thead><tr>
+      <th>Task</th><th>Team</th><th>Assigned to</th><th>Status</th><th>Due</th>
+    </tr></thead><tbody>${sorted.map(t => `<tr onclick="openTaskModal('${t.id}')" style="cursor:pointer">
+        ${td(`<b>${esc(t.title)}</b><br><small style="color:var(--muted)">${esc(t.id)}</small>`)}
+        ${td(tdot(t.team) + esc(t.team))}
+        ${td(t.assignee ? esc(t.assignee) : '<span style="color:var(--muted)">unassigned</span>')}
+        ${td(schip(t))}
+        ${td(dueLabel(t), isOverdue(t) ? 'color:var(--accent);font-weight:600' : '')}
+      </tr>`).join('')}</tbody></table></div>
+    <div class="mob-list">${sorted.map(t => rowHtml(t, true)).join('')}</div>
+  </div>`;
+}
+
+function projGalleryHtml_(){
+  if(pgal.loading && !pgal.items.length) return `<div class="panel"><div class="empty">Loading finished work…</div></div>`;
+  if(!pgal.items.length) return `<div class="panel"><div class="empty">Nothing finished in this campaign yet.<br>
+    <span style="color:var(--muted)">Approved work with a file attached appears here automatically.</span></div></div>`;
+  return `<div class="g-count">${pgal.total} finished ${pgal.total===1?'piece':'pieces'}</div>
+    <div class="gallery">${pgal.items.map((it,i) => galCard_(it, i, 'pgal')).join('')}</div>`;
+}
+
+function projNotesHtml_(){
+  const me = state.me ? state.me.name : '';
+  return `<div class="panel">
+      <div class="p-h"><h3>Campaign notes</h3></div>
+      <div class="pn-compose">
+        <textarea id="pn-text" rows="3" placeholder="Brief, decisions, client feedback — anything the team should find here later…"></textarea>
+        <button class="btn btn-p" onclick="addProjNote(this)">Add note</button>
+      </div>
+    </div>
+    <div class="panel">
+      ${projNotes.loading && !projNotes.items.length ? '<div class="empty">Loading…</div>'
+        : !projNotes.items.length ? '<div class="empty">No notes yet — the first one sets the context for everyone else.</div>'
+        : projNotes.items.map(nt => `<div class="pn">
+            <div class="cm-av" style="background:${memColor(nt.author)}">${initials(nt.author)}</div>
+            <div class="pn-b">
+              <div class="cm-m"><b>${esc(nt.author)}</b> · ${rvWhen(nt.created)}</div>
+              <div class="pn-t">${esc(nt.text)}</div>
+            </div>
+            ${(nt.author === me || isHead() || isAdmin()) ? `<button class="mk-btn" title="Remove" onclick="delProjNote('${nt.id}', this)">✕</button>` : ''}
+          </div>`).join('')}
+    </div>`;
+}
+
+function viewProjects(){
+  if(!projPick) return viewProjectList_();
+
+  const p = projByName_(projPick) || { name: projPick, colour: 'var(--muted)', client: '', status: 'Active',
+    counts: { total: 0, open: 0, overdue: 0, inReview: 0, done: 0 } };
+  const ts = projTasks_(projPick);
+  const canEdit = isHead() || isAdmin() || isAssigner();
+
+  const SUBS = [['overview','Overview'], ['tasks','Tasks'], ['gallery','Gallery'], ['notes','Notes']];
+  const body = projSub === 'tasks' ? projTasksHtml_(ts)
+    : projSub === 'gallery' ? projGalleryHtml_()
+    : projSub === 'notes' ? projNotesHtml_()
+    : projOverviewHtml_(p, ts);
+
+  return `<div class="pj-hero" style="border-left:4px solid ${esc(p.colour)}">
+      <button class="btn btn-g pj-back" onclick="closeProject()">← All campaigns</button>
+      <div class="pj-hero-t">
+        <div class="pj-hero-name">${esc(p.name)}</div>
+        <div class="pj-hero-sub">${p.client ? esc(p.client) + ' · ' : ''}${p.counts.total} task${p.counts.total===1?'':'s'}${p.counts.overdue ? ' · <b style="color:var(--accent)">' + p.counts.overdue + ' overdue</b>' : ''}</div>
+      </div>
+      <div class="pj-hero-a">
+        ${canEdit ? `<select class="mini-sel" onchange="setProjStatus(this.value)" title="Campaign status">
+            ${['Active','On Hold','Done'].map(s => `<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>` : ''}
+        <button class="btn btn-p" onclick="openNewTaskModal(${esc(JSON.stringify(projPick))})">＋ Add task</button>
+      </div>
+    </div>
+    <div class="filters pj-subs">${SUBS.map(([id,label]) =>
+      `<button class="btn ${projSub===id?'btn-p':''}" onclick="setProjSub('${id}')">${label}</button>`).join('')}</div>
+    ${body}`;
+}
+
+/* ── the mobile add pill ──────────────────────────────────────────────────
+   One ＋ used to mean one thing. Now it can start a task or a campaign, so it
+   opens into a short menu that shuffles out from under the button. */
+
+function openAddPill(){
+  if(document.getElementById('add-pill')) return closeAddPill();
+  const canProject = isHead() || isAdmin() || isAssigner();
+  const scrim = document.createElement('div');
+  scrim.className = 'add-scrim';
+  scrim.id = 'add-scrim';
+  scrim.onclick = closeAddPill;
+  const pill = document.createElement('div');
+  pill.className = 'add-pill';
+  pill.id = 'add-pill';
+  pill.innerHTML = `<button onclick="openNewTaskModal()"><span class="ic">☰</span>Add task</button>
+    ${canProject ? `<button onclick="openNewProjectModal()"><span class="ic">◈</span>Add campaign</button>` : ''}`;
+  document.body.appendChild(scrim);
+  document.body.appendChild(pill);
+  requestAnimationFrame(() => { scrim.classList.add('on'); pill.classList.add('on'); });
+  const btn = document.querySelector('#tabbar .tb-new'); if(btn) btn.classList.add('open');
+}
+
+function closeAddPill(){
+  const s = document.getElementById('add-scrim'); if(s) s.remove();
+  const p = document.getElementById('add-pill'); if(p) p.remove();
+  const btn = document.querySelector('#tabbar .tb-new'); if(btn) btn.classList.remove('open');
 }
 
 Object.assign(window, { cleanUrl_, applyTheme, dark, teamColor, avTextColor, isClosed, isOverdue, fmtD, fmtT, fmtDT, dueLabel, initials, member, memColor, av, isAdmin, isHead, canManage, isAssigner, isMyRequest, canDecide, roleLabel, toast, pchip, schip, tdot, setSync, postApi_, api, friendlyError_, testConnection, parseTask, upsert, fetchAllTasksPaged_, loadTasksFirstFast_, refreshTasks, canUseGoogle, fetchPing, loginScreenOta_, autoUpdateOn, toggleAutoUpdate, updateAvailable, isDesktopApp, verGt, installLatest, maybeSelfUpdate, setLoginBusy, showLogin, bootstrapAndEnter, doLogin, enterApp, logout, TAB_DEFS_, renderNav, renderTop, notifs, notifItemsHtml, bindNotifClicks, renderNotifPanel, d0, greetWord, odStrip, rowHtml, viewOverview, miniCalHtml, jumpToDate, mondayOf0_, viewTasks, mondayOf, viewCalendar, bindCalendarDrag, dayColAt, viewReportsCharts, openTaskModal, saveTask, quickStatus, deleteTaskClick, assignTask, openNewTaskModal, createTask, closeModal, canDriveUpload, uplCentral, pickUpload, startUpload, uplStatus, cancelUpload, renderUplCard, tcStr, parseTc, toLocalDT, rvWhen, rvTask, rvManage, rvMine, detectMedia, openReview, closeReview, renderReview, toggleViewAs, mediaHtml, imgFail, dvvFail, loadYT, ytFallback, renderTools, renderSide, updatePins, renderCompose, imgClick, addMarkerAtCurrent, cancelForm, saveForm, postComment, gotoItem, resolveMk, delReview, setSendLabel, sendChangesClick, saveDeliverable, shareUrl, toggleShare, renderShare, createShareClick, copyShare, revokeShareClick, bootGuest, pollGuest, setReportPeriod, periodStart_, reportStatsHtml, viewReports, bulkTemplateHref, openBulkModal, previewBulk, submitBulk, hasFlagC, setViewVersion, simpleAction_, startTaskClick, acceptChangesClick, qcPassClick, renewTaskClick, holdTaskClick, acceptBriefClick, reviewBuckets, reviewBadge, rvqRow, viewReview, rejectTaskClick, renderContent, renderAll });

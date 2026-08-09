@@ -24,7 +24,8 @@
  * ============================================================================
  */
 
-const PORTFOLIO_HEADERS = ['Task ID', 'Title', 'Team', 'Assignee', 'Requester', 'Completed', 'Thumb ID', 'Link', 'Kind', 'Added'];
+const PORTFOLIO_HEADERS = ['Task ID', 'Title', 'Team', 'Assignee', 'Requester', 'Completed', 'Thumb ID', 'Link', 'Kind', 'Added', 'Project'];
+const PORTFOLIO_PROJECT_COL = 11;   // the campaign, so a gallery can be filtered to one
 const PORTFOLIO_FOLDER = 'CreativeFlow Portfolio';
 const GALLERY_PAGE = 24;      // one screenful of masonry; keeps answers small
 
@@ -151,7 +152,7 @@ function portfolioCapture_(master, row) {
     const vals = [id, String(cur[COL.TITLE - 1] || ''), String(cur[COL.TEAM - 1] || ''),
       String(cur[COL.ASSIGNEE - 1] || ''), String(cur[COL.REQUESTER - 1] || ''),
       (cur[COL.COMPLETED - 1] instanceof Date) ? cur[COL.COMPLETED - 1] : new Date(),
-      thumbId, link, m.kind, new Date()];
+      thumbId, link, m.kind, new Date(), String(cur[COL.PROJECT - 1] || '').trim()];
 
     if (at) sh.getRange(at, 1, 1, PORTFOLIO_HEADERS.length).setValues([vals]);
     else sh.appendRow(vals);
@@ -175,6 +176,7 @@ function portfolioRows_() {
         assignee: String(r[3]), requester: String(r[4]),
         completed: (r[5] instanceof Date) ? r[5] : null,
         thumbId: String(r[6] || ''), link: String(r[7] || ''), kind: String(r[8] || ''),
+        project: String(r[10] || '').trim(),
       };
     });
 }
@@ -193,8 +195,10 @@ function apiGallery_(user, req) {
   const page = Math.max(0, Math.floor(Number(req.page) || 0));
   const scope = String(req.scope || 'team');
   const wantTeam = String(req.team || '').trim();
+  const wantProject = String(req.project || '').trim();
 
   let rows = portfolioRows_();
+  if (wantProject) rows = rows.filter(function (r) { return String(r.project).toLowerCase() === wantProject.toLowerCase(); });
   if (user.role === 'Super Admin') {
     if (wantTeam) rows = rows.filter(function (r) { return r.team === wantTeam; });
     if (scope === 'mine') rows = rows.filter(function (r) { return r.assignee === user.name; });
@@ -224,7 +228,7 @@ function apiGallery_(user, req) {
         /* The still we own, which outlives the original file. The client falls
            back to the live link's own thumbnail when there is no still. */
         thumb: r.thumbId ? 'https://drive.google.com/thumbnail?id=' + r.thumbId + '&sz=w800' : '',
-        link: r.link, kind: r.kind,
+        link: r.link, kind: r.kind, project: r.project,
       };
     }),
   };
@@ -240,6 +244,11 @@ function portfolioBackfill_(req) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const have = {};
   portfolioRows_().forEach(function (r) { have[r.id] = true; });
+
+  /* Rows captured before campaigns existed carry no project, so a campaign
+     gallery would be empty for work that plainly belongs to it. Fill those in
+     from the task itself before adding anything new. */
+  const filled = backfillPortfolioProjects_(ss);
 
   let added = 0, scanned = 0, stills = 0;
   const sheets = [ss.getSheetByName(SHEETS.MASTER), ss.getSheetByName(SHEETS.ARCHIVE)];
@@ -261,12 +270,12 @@ function portfolioBackfill_(req) {
       portfolioSheet_().appendRow([id, String(r[COL.TITLE - 1] || ''), String(r[COL.TEAM - 1] || ''),
         String(r[COL.ASSIGNEE - 1] || ''), String(r[COL.REQUESTER - 1] || ''),
         (r[COL.COMPLETED - 1] instanceof Date) ? r[COL.COMPLETED - 1] : new Date(),
-        thumbId, link, m.kind, new Date()]);
+        thumbId, link, m.kind, new Date(), String(r[COL.PROJECT - 1] || '').trim()]);
       have[id] = true;
       added++;
     }
   }
-  return { added: added, stills: stills, scanned: scanned, more: added >= limit };
+  return { added: added, stills: stills, scanned: scanned, projectsFilled: filled, more: added >= limit };
 }
 
 /**
@@ -292,4 +301,41 @@ function portfolioRemove_(taskId) {
       return;
     }
   } catch (e) { /* never worth failing a status change over */ }
+}
+
+
+/**
+ * Fills the Portfolio's campaign column for rows captured before campaigns
+ * existed, by reading the task back out of Master or Archive.
+ *
+ * Without it a campaign gallery is empty for work that plainly belongs to it —
+ * the piece is in the portfolio, it just never learned which campaign it was.
+ */
+function backfillPortfolioProjects_(ss) {
+  const sh = portfolioSheet_();
+  if (sh.getLastRow() < 2) return 0;
+
+  const byId = {};
+  [[SHEETS.MASTER, COL.PROJECT], [SHEETS.ARCHIVE, ARCHIVE_PROJECT_COL]].forEach(function (pair) {
+    const src = ss.getSheetByName(pair[0]);
+    if (!src || src.getLastRow() < 2 || src.getMaxColumns() < pair[1]) return;
+    const w = pair[1];
+    src.getRange(2, 1, src.getLastRow() - 1, w).getValues().forEach(function (r) {
+      const id = String(r[COL.ID - 1] || '').trim();
+      const p = String(r[w - 1] || '').trim();
+      if (id && p && !byId[id]) byId[id] = p;
+    });
+  });
+
+  const rng = sh.getRange(2, PORTFOLIO_PROJECT_COL, sh.getLastRow() - 1, 1);
+  const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+  const cur = rng.getValues();
+  let n = 0;
+  for (let i = 0; i < cur.length; i++) {
+    if (String(cur[i][0]).trim()) continue;
+    const p = byId[String(ids[i][0]).trim()];
+    if (p) { cur[i][0] = p; n++; }
+  }
+  if (n) rng.setValues(cur);
+  return n;
 }

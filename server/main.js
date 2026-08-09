@@ -55,6 +55,8 @@ function routes_() {
     taskDetail:    { fn: apiTaskDetail_ },
     teamStats:     { fn: apiTeamStats_ },
     gallery:       { fn: apiGallery_ },
+    projects:      { fn: apiProjects_ },
+    projectNotes:  { fn: apiProjectNotes_ },
     listReview:    { fn: apiListReview_ },
     // authed writes (locked)
     createTask:    { lock: true, fn: function (u, q) { const cut = createCutoff_(u, q); if (cut) return cut; return apiCreate_(u, q); } },
@@ -68,6 +70,10 @@ function routes_() {
     acceptBrief:   { lock: true, fn: apiAcceptBrief_ },
     uploadTicket:  { fn: apiUploadTicket_ },              // no lock: mints a Drive session, writes nothing
     uploadFinish:  { lock: true, fn: apiUploadFinish_ },
+    projectCreate:   { lock: true, fn: apiProjectCreate_ },
+    projectUpdate:   { lock: true, fn: apiProjectUpdate_ },
+    projectNoteAdd:  { lock: true, fn: apiProjectNoteAdd_ },
+    projectNoteDel:  { lock: true, fn: apiProjectNoteDelete_ },
     pushSubscribe:   { lock: true, fn: apiPushSubscribe_ },
     pushUnsubscribe: { lock: true, fn: apiPushUnsubscribe_ },
     bulkCreate:    { lock: true, fn: apiBulkCreate_ },

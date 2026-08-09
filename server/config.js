@@ -20,6 +20,8 @@ const SHEETS = {
   VERSIONS: 'Versions',
   PUSH: 'Push Devices',   // hidden: rows are device credentials, not data to browse
   PORTFOLIO: 'Portfolio', // finished work + its permanent still (gallery.js)
+  PROJECTS: 'Projects',   // campaigns (projects.js)
+  PNOTES: 'Project Notes',
 };
 const MEMBER_TAB_PREFIX = '👤 ';
 const TEAM_TAB_SUFFIX = ' Team';
@@ -35,8 +37,13 @@ const COL = {
   H_REMINDED: 20, H_OD_COUNT: 21, H_OD_LAST: 22,
 };
 const X = { STARTED: 23, STAGE: 24, QC_ROUNDS: 25, REV_DAYS: 26, STAGE_SINCE: 27, FLAGS: 28, RENEWED_FROM: 29, BRIEF_PENDING: 30 };
+/* Campaign name. APPENDED at 31 rather than inserted next to the title: the
+   sheet holds live data and shifting existing columns would move every formula,
+   protection and mirror with it. Far right in the sheet, first-class in the app. */
+COL.PROJECT = 31;
+const ARCHIVE_PROJECT_COL = 20;   // Archive keeps A..S (19) + the campaign
 const LAST_COL = 22;      // width of the v1 core block
-const LAST_COL2 = 30;     // full row width
+const LAST_COL2 = 31;     // full row width (30 + Project)
 const VISIBLE_COLS = 19;  // A..S — what members / mirrors / Archive see
 
 const HEADERS = [
@@ -46,7 +53,7 @@ const HEADERS = [
   'Overdue?', 'Completed On', 'On Time?', 'Days Late',
   'Revisions', 'Notes', '_ReminderSent', '_OverdueAlerts', '_LastOverdueAlert',
 ];
-const X_HEADERS = ['Started At', 'Stage', 'QC Rounds', 'Review Days Used', 'Stage Since', 'Flags', 'Renewed From', 'Brief Pending'];
+const X_HEADERS = ['Started At', 'Stage', 'QC Rounds', 'Review Days Used', 'Stage Since', 'Flags', 'Renewed From', 'Brief Pending', 'Project'];
 
 const STATUSES = ['New', 'In Progress', 'In Review', 'Revisions', 'Done', 'On Hold'];
 // v5 fix: Rejected is a real status the API writes — it belongs in the sheet's

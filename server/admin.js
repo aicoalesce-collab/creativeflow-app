@@ -51,6 +51,10 @@ function apiAdmin_(user, req) {
     case 'report':          return adminReport_();
     case 'mailAudit':       return adminMailAudit_(req);
     case 'portfolioBackfill': return { ok: true, result: portfolioBackfill_(req) };
+    /* Targeted, idempotent schema step for campaigns — deliberately not setup(),
+       which would rebuild a sheet holding live work. */
+    case 'ensureProjectSchema': return { ok: true, result: ensureProjectSchema_() };
+    case 'renameProject':  return adminRenameProject_(user, req);
     case 'setConfig':       return adminSetConfig_(req);
     // migration (migrate.js)
     case 'migratePreflight': return migratePreflight_(req);
@@ -74,6 +78,14 @@ function adminReport_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tabs = {};
   ss.getSheets().forEach(sh => { tabs[sh.getName()] = sh.getLastRow() - 1; });
+  /* Column widths matter before any schema change: the readers clamp with
+     Math.min(LAST_COL2, getMaxColumns()), so a sheet narrower than the code
+     expects fails silently rather than loudly. */
+  const widths = {};
+  [SHEETS.MASTER, SHEETS.ARCHIVE].forEach(function (n) {
+    const sh = ss.getSheetByName(n);
+    if (sh) widths[n] = { maxColumns: sh.getMaxColumns(), headers: sh.getLastColumn() };
+  });
   let tzOk = true, tzMsg = '';
   try { assertTz_(); } catch (e) { tzOk = false; tzMsg = String(e); }
   return {
@@ -85,6 +97,7 @@ function adminReport_() {
     mailQuotaLeft: (function () { try { return MailApp.getRemainingDailyQuota(); } catch (e) { return -1; } })(),
     triggers: ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction()),
     tabs: tabs,
+    widths: widths,
     tzOk: tzOk, tzMsg: tzMsg,
     scriptTz: Session.getScriptTimeZone(),
     sheetOwner: (function () { try { return ss.getOwner().getEmail(); } catch (e) { return '(unavailable)'; } })(),

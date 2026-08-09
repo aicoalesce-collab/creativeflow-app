@@ -183,7 +183,9 @@ function archiveDone() {
     data.forEach((r, i) => {
       const status = r[COL.STATUS - 1], done = r[COL.COMPLETED - 1];
       if (r[COL.ID - 1] && status === 'Done' && done instanceof Date && done.getTime() < cutoff) {
-        archive.appendRow(r.slice(0, VISIBLE_COLS));
+        /* carry the campaign across: Archive is A..S plus Project, so a
+           finished campaign keeps its history after the task leaves Master */
+        archive.appendRow(r.slice(0, VISIBLE_COLS).concat([String(r[COL.PROJECT - 1] || '').trim()]));
         toDelete.push(i + 2);
       }
     });
