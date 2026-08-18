@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CreativeFlow</title>
+<script>
+/* CF-BOOT — do not rename; serveApp_ rewrites these lines, exe+ping regex APP_VERSION */
+window.APP_VERSION = '6.14.0';
+window.CF_INJECTED_API = '';
+window.CF_DEFAULT_API = 'https://script.google.com/macros/s/AKfycbwgIxm64fS8lwfbhv8Ro1e7JlF9JzLAUjLvQ3TNgJnFiW8yf8SWmaqpgkpLSMoaldEl/exec';
+window.CF_GUEST_TOKEN = '';
+window.CF_OPEN_TASK = '';
+</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="48x48" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAADb0lEQVR42u2aXShsURTHtwg1zIR5RVK+lfKg8e2BvCIpKYlISaQp8kDSNffeBnnwVbxQEvIiIU/y4sqd6EaSj3vd5IGUryTmf1vrzni4metj5hzn1Nm163TmzF7rd85ea//XOVuIv00nhPgkhPgphLALIaDQTr4dCyE+O3x+cv6bgp121W1CCL1w3HmotH8VjmmjVoBfQuFz/jUxoVrnnV0D0AA0ACV2Hx8fpKeno7GxEd3d3ejt7UVtba3yAaKjo9HX14fz83P827a3t+Hl5SUNgJ+fHwICAp4z8KoeHByM9vZ25OTk8HFZWRnGx8ext7fHMHNzc4iIiPDcEzAajSguLkZpaSlqamrQ1NSEzs5OTE5OYm1tDaOjoygqKoK/v/+LY+Xl5fF/wsLCpI8Bb29vVFVVobCwkI+fu0an06GlpQV3d3fY3Nz873jV1dW4vb1FUlKS9EFMjg0PDyMyMvJV12dnZ+Pw8NDl73Qj7HY7urq6pM9CNLdnZmaQnJz8JgOVlZXPnjeZTLi/v8fl5SWCgoKkB6ioqMDY2JjHAn53d5czS09Pj/TrAM31o6Mj5ObmumUsKiqKg35wcJCdf3h44OCnc/n5+dIBZGZm4vHxkWPA3btPU3Fra4sBpqen5VmJm5ubcXJy4pHpQ0/R2TIyMuQBGBgYwMHBgUcAFhYW2Pn19XX5tNDIyAjOzs7cNhYfH89pk1pJSYl8AFarlY2GhIS4ZWxoaIjHoYRAYk02AFpwqBUUFLzbEOmbm5sbHsdsNssrp8PDwzkLTU1NvdtQa2srO391dcUwstcDs7OznLcTExPfbCQhIQGnp6cMYLFYPqagISl7cXEBm832pvUgJSUFy8vL7DylYoPB8HEVGWn16+trLC0tITAw8MXrKehJMpDmcTeGPCan4+LisLKygv39fa4HXEnqrKws7OzsPFVWVGUpqiZOS0tjp+bn59Hf34+2tjauXxsaGtDR0cEaJyYmBhsbG1hcXHQJquiivry8HKurq9Dr9ep7KxEaGoqJiQmPCEDJAWJjY1FfX8+FeGpqKou0uro6+Pr6Kv+9EGUmqn2djWSCG9pefgAKYFqkKNeT5KBqS3szpwFoABqABqAqANV/Zj1WMcBvArCoGMDq3OzxXYXO/xBCGJw7VmjXxxfH3gM1bLexOp3/A4bcIaMar+HKAAAAAElFTkSuQmCC">
+<link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAPsElEQVR42u2dCVRV5RbHt2Y4W0qiNJqIOKRZWeoiV5mpaM98q2wpZdHwNOlR2mwC2oBDrQa0tEmLJJsEl2Wa2UpLiyjNNE0lFGnQyCQVh4rU773/CW6Xyz3nHpJ7ued8/73Wb9Vyofewv/0/9xv23p9Iza2tiCSJSJaIrBeRUhEpFxFFSAg5IiJ7RaRQRHJE5L8iEiNBsggRSRSR5RUfzAEg4coaEUkWkRa1Ffx9RGQzHUscxm4RGXw8gd9IRGaJyDE6kziUoxVT9ciaBn8bEcmjA4lL2CEiPWoS/EV0GnEZB+2IAIvd1XQWcSnFIhJlJYCZdBJxOdjJrO8v+HtzwUs0IcU3+BuIyCY6hmhCWcVa12PD6RSiGZO8BbCMDiEaLoiNtUA00xuIpsRDAP+hI4impEMA2XQE0ZRFEMBGOoJoSgEEsI+OIJqyX7gAJpoX1dARRGvoBEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEEIBEGJGRESEOvvss9UFF1ygLr30UpWQkKCGDBmi+vfvr/r27as6deqkTjrpJAqAuCPYL774YnXPPfeoN954Q23dulUdOXJE2bEffvhBzZ49W0VHR1MAxBmccMIJqk+fPuqhhx5SK1euVIcOHVLHa999951q2LAhBUDCEwTn0KFD1bx581Rpaamqbfvzzz9VkyZNKAASXkRFRan09HRVUlKigmkfffQRp0AkfOjZs6cxn//jjz9UKGzw4MEUAKlb6tWrp4YNG6ZWr15tBGVxcbE6evRo0IP/6aef5i4QqVvi4+PVunXrjID8+uuv1cCBA40/P+WUU9To0aPVqlWrgiKGhQsXqgYNGlAApG6IiYlRr776qjp27Jj69ddf1ZgxY1T9+vX9/mxkZKQaOXKkevnll41dm+Nd9E6ePNn0sygAEvStzAcffNAIRNhnn31W4734c889V02aNMn4u3b3/WGffPKJscbgSXAdzHFbtmyp2rVrp8455xx13nnnGQPRvXt3403YqlWr2n4jhe0CNz8/3xOQr7322nFvQbZo0cI4G7j11luNOT2mNp9++qn64osvjOkTvmXuvPNO1a1bN6ZCBBsEMuawEydOVNnZ2cYA4Cu7vLzc1lfzrl27VF5ensrKylJpaWnqmmuuUWeddZbj/dK0aVPj1BXTHRjm9Pfff7/xYmAukMPp1auXmjZtmtq4caNngCvtt99+M4J6+/btqqCgQG3bts04zPH9OTvH9nPnzlXDhw9XzZs3d5R/8ObF7+9teCMzGc7BYBozffp0I6hhO3bsMN74d999t7GvjGkN3npW8+DWrVsbc9mrr75apaamqtzcXPX9998HFANEtXTpUpWSkqLOPPPMsPbTqFGj1IEDB6o8/6xZs5gN6kQaNWqkrrvuOvXxxx8bb3Bs3eFrHMFem5+DKc/48ePVihUrAk6d8ByY795xxx3GtmG4+ArzcrwQfA1zfoifAnDYAhZbcEVFRZ6jcyxiQ/HZZ5xxhpozZ46tnQ58M2Ce3aZNmzr118knn6zWrl1b7fmwKK3FfXcKIBQg0LF1BsMbuV+/fnXyHJjqILjtLKYxnaorf+E5N2zYUO2Z9u/fr+Li4lgQ46Q88ylTphgBhzlsUlJSWDwXgujLL7+0FMAjjzxSJ88WGxtrLPj92YgRI1gR5hTat2/v2atGsIXbmwtrkeeee85UAI8//njIn6lr166mJ7Svv/46SyKdAnYt9u7dawwcth0bN24cts+KdcnBgwerBRymSqF8DlRklZWV+Q1+pDjU9ZqEArAJjtYrberUqY54Zhy6+S6QkS8Tqs/HyfaePXtMv40mTJjAongn5KZkZmZ6Bg27Lk46obztttvqZMqBbVcc/pkZUpqbNWtGAYQzyL9BqV2l5eTkOHKr7uGHH/b8Dm+//XZIUj42bdpkuRgfMGAA26KEO9gxqbSvvvrK2P1x6lkFzidgy5cvD/rn4dTayrBlzL5AYU5iYqKn0AKHSMjMdHp6BrZtkYAXzM+55ZZbQlVmSAEE84DL+1AJfWXcMBBPPPGEWrNmTdD+/Q4dOvjdefI2JPy5KMvTfQLA1qb3/HX9+vWuOaLH3Bx5QcE6fwh0CAe76667dMwKds7D4qDI29A6j7UMgUHKdyDbt29fMNoOUgC1RZcuXTyleJVF2AzuwHTu3NlWHhJEoqmPnLHliWorb0MhNgM88DkJam8D2eHDh3U59XWmAK6//vpqx/RWRSvkL/CSsGMvvPCCzn4K/4f0PbV0aWVSrZ8vFBYW2hIA2pFTAGEKFrq+dtFFF2kf4B07dlQ33nijKejCbMfQv9Pq3/EGZaAUQIjByaS37dy5k294EbVkyRIVanP6gaPjBIB8ft8uDJrkqNtKaENxvj969+5tqyUhzlHM/g1fwqluWRsB+PsaT05OpgACMH/+fFtvdExr6K8wfjgkufkaevlw0Kxre+28/VE8hBNi+iyMv+J9BxLTIY3y1P8RGRkZtt7+Tz31FP0VzgJAa0FfQ/MpDph1rtQvv/xiq5UjbmOkz8JYAI899pjfDsEcMPsHhmbGjQQHCOCDDz6oNnBvvfUWB8yCyj5IVoZpZZC7LVMAtQGayvras88+ywEz4cILL7T19seLhf4KcwFgoeuvC7PGGYsBQT2xHUNDX/orzAWAqq9w6pwW7vTo0cNW8KNHqksb3LpLAFdeeaXfAUQHBQ5YdTA1tGMPPPAA/eUEAdx8881+BxB73BywqqCjMxrY2ulA3bZtW/rMCQLALSTh0jvTDeWO9J3DBIDibH/GXaCq4Mol31tc/Blubte44ss9AnjzzTc5YF74tlY0M9y2SH85SAC3336734HEFUccsL9BYwA71rdvX/rLSQK46aab/A4kLrTjgP0F7te1Y7jeSMNmV84WwLBhw/wOJtqJM4X3L5AWYscuv/xy+stpAkDNr5kxj0XUaaedVqVHklXFFwPcgQKIjo42HVRcd6r7oM2cOdPW23/s2LEMcKcmw6FVnz/D4Ov+9se2ZiDD7S9NmjRhgDtVAOiU7M9wj63OA+Z9HRQrvlwsgJdeesm0msnFHQosQSdssxsdfXP+O3XqxOB2sgBSUlJMBxgXPeg4WEOHDrX19n/nnXcY2E4XwPnnn286wCtXrtRysN59992AwY86CnbOc4EA0BH6p59+Mh1ktAbUaaDQltBfkZCvheKeMQogRLzyyiumA61bbYDdgy9WfLlIAGYnwpUtUtxyPVIgYmJiql2q7c9+/PFHdeKJJzKo3SIADCYC3czQBkSHQZoxY4att/+9997LgHaTAABugTSzDRs2uH6AcJhldijobbgBsmXLlgxotwkAHSJ2795tOvBJSUmuHiCrF4C3TZw4kcHsRgGA9PR0yyN/N91uiEuzCwoKjOlfRESE+vnnn23N/fGzDGaXCgCF37t27TINgCeffNI1A4LaXTQFw/8j8c+OoTKMgexiAYCBAwea7oNjh2TQoEGOHwzM4dHh4f3337fMh/I2tJDXZTdMawGArKws00AoLS1Vp556qqMHY8KECZ6MV1xcZyfnR/ML7vQSAK7qsdoW/fDDDx37NoyMjPTM95EH9eKLLwYUALtkaCYA0LNnT2PLz8yef/55xw0CanYXL17s+R1GjRplNLKyMlwWiLURA1gzAYArrrjC8mT00UcfddTv49sJD+1fAhlEwuDVVACVnSOs7sLCzpATuiEgyc37oAu/06FDhyyDf+HChez0oLsAwPjx4y0DJTMzM6yfv127drb2+b0NBTG8J40C8ICpgNWaAH3zo6KiwrLwf8uWLTUKfnw7DBgwgEFLAVQFrVL8XalaaSUlJeraa68Nm2kDClbQ5KumxgtCKADLellMeawMFVXYSq3L5xwzZoytnj6+lp+fz3QHCiAwCQkJRpaomeEa0cmTJ4dcCKhgs9rdsar22r59O7s7UwA121dHZdQ333xjGlTYaZk9e7bRYzOYUyPcbI9rSf3tWJWXl6ulS5ca6xh/lwLCsEPUvXt3BioFUHNwH9aIESPUunXrLKcX3377rUpLS1NdunSplc9Fdio6V6CHkdlODu47q0zdGD16tGkLmMsuu4xBSgEc/zcCcmamTJmitm7daikGLE5zc3ONBlRXXXWVsWDFdmWLFi2qfVM0bdpUtW/fXl1yySXGuQQyOVetWmW82b2trKzMuJ4Ud3T5vs2R9gwB+jO0iWeAUgC1DppGIfEsLy+vRgtSzNORooDpk9XfQwEPFtwoUcQUyKpO1+wuhOzsbAYnBRB8GjdubFzLOnLkSJWammp0pFuyZIn6/PPP1ebNm1VxcbGRd4MDK/wX3xD4c0xvMH+fO3eu0aEC05j+/fvX6CI6dLhDFqu/vkf4dmFwUgCu5plnnqkW/O+9955q2LAh/UMBuBusHXynUdi+ZZoDBaAFOTk51YLf6QU9FACxxQ033FAl+LFDxDc/BaAFp59+epW7fXHzJS+yoAC0AOcIWORWGvp98tI/CkAbkpOTPcG/YMEC46SafqEAtKBfv37q8OHDRk7Q9OnT2cSWAtAHZKjiBBmFO0ivoE8oAG1AwCP40cIxPj6ePqEAnAFuqEH3Cdy2uGjRIuPeLeTnoNj+vvvuU4mJiUYKhVlf0ubNmxttzZE/tGLFCuN6U/qVAnAEQ4YMsSyq8Vdkg59H/THSG6ZOnWpc74Q2h2hyxcUuBeAYMjIyVG0Y0q7j4uLoUwrAOaAo5njt999/NxpzYQpEn1IAjlqs2rmF0crQ1x+NruhPCsBRoEePnWuIzAx3F6BJF2oL6E8KQJt5f1FRkRo3bhwT2SgAZ4MKrJpYYWGh0d+Hp7kUgCtAXo6de7jmzJljpDSwMS0F4CpQx4v8HBSy49tg2bJlav78+cbUCPd0xcbGMlAoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEIoAEJqRQDH6ASiKYh92U9HEE05AAFspiOIpmyDABbQEURTlkEA4+gIoinTIIAOdATRlASpsHw6g2jGHhGJqBTAWDqEaMYM8bJmIrKTTiGaUC4iseJjg3koRjQhVUxsHp1DXM5aEalvJoBWFYcDdBRxI3tFpLMEsK5MjyAuzfv5l9i0biKyg04jLgEv9H9LDa11xVExHUicTJ6IxMk/tPoVZwT76EjiwK3OdKsFb02/DdI4LSIOoEREMkWkowTB6olIr4p91NyKVOqy/4vjCB1PQszRil2dLSKyWEQyRGSQd3qDHfsf+R4egrnQy9UAAAAASUVORK5CYII=">
+<meta name="theme-color" content="#0b0e0b">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CreativeFlow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300..700&family=Doto:wght@300..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/xxr3nyl.css">
+<style>
+:root{
+  /* ── BRAND PALETTE ──────────────────────────────────────────────────────
+     Primary rose, secondary violet, accent lime, on the two neutrals.
+
+     The 50/35/15 split describes brand collateral, not an application. Half a
+     screen of rose is unusable for eight hours a day, so here the neutrals do
+     the carrying and the three brand colours are spent on meaning:
+       rose   = this needs you, and every primary action
+       violet = someone else has it (in review, with the requester)
+       lime   = finished
+     Nothing else may use them. */
+  --bg:#f7f6f0; --card:#ffffff; --card2:#ffffff; --ink:#161a15; --line:#e6e6dc;
+  --muted:#83887c; --soft:#eef0e6;
+  --accent:#5c7d3d; --accent-ink:#ffffff; --accent-soft:#e9f0dd;
+  --pill-line:#d5d8ca;
+  /* State, all four drawn from the same night-meadow the welcome screen is:
+       moss  = act — this needs you, and every primary action
+       amber = someone else has it (in review, with the requester)
+       teal  = finished and settled
+       rose  = late. The ONLY pink in the product, so that seeing pink means
+               something rather than meaning "a button". */
+  --s-late:#c0405c; --s-review:#b07a22; --s-review-soft:#d3a44e;
+  --s-good:#2f7f74; --s-good-soft:#8fd0c6; --s-hold:#9a9e92;
+  --radius:14px; --slot:46px;
+  /* Three faces, three jobs.
+     display — The Seasons, for the wordmark and the few places a name should
+       carry weight. A high-contrast serif: not for small text or data.
+     dot     — Doto, kept for NUMBERS and ids, where a pixel face is genuinely
+       good, and where the product's dot motif comes from.
+     body    — everything anyone actually reads. */
+  --font-display:"the-seasons",Georgia,'Times New Roman',serif;
+  --font-dot:'Doto','Archivo',system-ui,sans-serif;
+  --font-b:'Archivo',system-ui,sans-serif;
+  --shadow:0 1px 2px rgba(23,23,23,.05);
+}
+[data-theme="dark"] .s-done{color:#141414}
+[data-theme="dark"]{
+  /* Dark is the default now, so this is the face of the product. The ground is
+     near-black with a faint green cast — the same night the welcome screen is
+     lit against, rather than a neutral grey. */
+  --bg:#0b0e0b; --card:#141814; --card2:#1a1f19; --ink:#eef1e6; --line:#262c24;
+  --muted:#8d9385; --soft:#1a1f19;
+  --accent:#a9cb6b; --accent-ink:#101410; --accent-soft:#22301a;
+  --pill-line:#333a31;
+  --s-late:#f07a95; --s-review:#e0a74e; --s-review-soft:#e0a74e;
+  --s-good:#5fc9b8; --s-good-soft:#8fe0d2; --s-hold:#767c70;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--ink);font-size:13.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;transition:background .25s,color .25s}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit;color:inherit}
+select,input,textarea{font-family:inherit;font-size:13px;color:var(--ink);background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;outline:none}
+select:focus,input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+a{color:var(--accent)}
+.dotf{font-family:var(--font-dot);font-weight:900;letter-spacing:.05em}
+.betapill{border:1px solid var(--accent);color:var(--accent);border-radius:99px;font-size:8.5px;padding:2px 8px;letter-spacing:.14em;vertical-align:middle;font-family:var(--font-b);font-weight:500;margin-left:8px}
+.gbtn-browser{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:12px;font-weight:500;font-size:14px;display:flex;align-items:center;justify-content:center}
+.gbtn-browser:hover{border-color:var(--accent)}
+
+/* ══ THE WELCOME SCREEN ═══════════════════════════════════════════════════
+   A night meadow, lit from inside. Built entirely in CSS rather than shipped
+   as artwork: a PWA that has to open fast on a studio phone cannot afford a
+   two-megabyte photograph on its first screen, and gradients resize to any
+   display without a second asset.
+
+   Its palette is fixed and does not follow the theme. This screen is one
+   committed image, not a surface with a light mode. */
+#login{
+  --w-void:#04070a;      /* the sky at the top — black with a cold green bias */
+  --w-deep:#070d0b;
+  --w-teal:#0d4a4a;      /* the bloom behind the horizon */
+  --w-teal-hi:#1f8b7f;
+  --w-moss:#5d8129;      /* the lit grass */
+  --w-moss-hi:#c3e07a;
+  --w-cream:#f2efe2;     /* petals, and every word on this screen */
+  position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:16px;overflow:hidden;
+  background:var(--w-void);color:var(--w-cream);
+  transition:opacity .5s ease, filter .5s ease}
+#login.w-out{opacity:0;filter:blur(6px);pointer-events:none}
+
+.w-sky{position:absolute;inset:0;pointer-events:none}
+.w-sky>span{position:absolute;inset:0;display:block}
+/* the teal bloom, sitting just above the horizon like the reference */
+.w-bloom{background:
+  radial-gradient(78% 44% at 50% 78%, rgba(31,139,127,.42), rgba(13,74,74,.20) 46%, transparent 72%),
+  radial-gradient(120% 78% at 50% 116%, rgba(13,74,74,.55), transparent 70%)}
+/* the horizon: moss light burning out of the ground, and the dark bank in front */
+.w-meadow{background:
+  radial-gradient(50% 16% at 50% 100%, rgba(214,236,150,.62), rgba(122,163,55,.26) 48%, transparent 76%),
+  radial-gradient(92% 25% at 50% 107%, rgba(93,129,41,.50), transparent 68%),
+  linear-gradient(180deg, transparent 58%, rgba(7,13,11,.50) 82%, #050907 100%)}
+/* the sky is the product's own dot grid — the reference has one too */
+.w-stars{
+  background-image:radial-gradient(rgba(242,239,226,.62) 1px, transparent 1px);
+  background-size:34px 34px;background-position:8px 8px;
+  -webkit-mask-image:radial-gradient(72% 58% at 50% 34%, #000 12%, transparent 78%);
+  mask-image:radial-gradient(72% 58% at 50% 34%, #000 12%, transparent 78%);
+  opacity:.5;animation:wtwinkle 7s ease-in-out infinite}
+@keyframes wtwinkle{0%,100%{opacity:.34}50%{opacity:.62}}
+/* the artwork. Fades up once decoded so it arrives rather than snapping in. */
+.w-photo{background:no-repeat center/cover url("bg/welcome-wide.jpg");
+  opacity:0;animation:wphoto 1.5s ease .95s forwards}
+@keyframes wphoto{to{opacity:1}}
+.w-vig{background:radial-gradient(120% 92% at 50% 46%, transparent 44%, rgba(2,4,3,.72) 100%)}
+/* The controls need a ground to sit on. The photograph is at its busiest
+   exactly where the dock lands — dandelions, sketches, a laptop — so the light
+   is pulled out from under it with a soft feathered scrim rather than a card,
+   which would put a box on top of a poster. */
+.w-dock::before{content:'';position:absolute;left:-90px;right:-90px;top:-56px;bottom:-70px;z-index:-1;
+  background:radial-gradient(58% 62% at 50% 52%, rgba(3,6,5,.93), rgba(3,6,5,.80) 46%, rgba(3,6,5,.45) 70%, transparent 88%)}
+
+/* ── the wordmark ──
+   It glows because the whole scene is lit from within; the halo is teal so the
+   light on the letters looks like it comes from the meadow, not from a filter. */
+.w-mark{position:relative;text-align:center;z-index:2;
+  animation:wrise 1.0s cubic-bezier(.2,.75,.25,1) .15s both}
+@keyframes wrise{from{opacity:0;transform:translateY(14px) scale(.985);filter:blur(7px)}
+                 to{opacity:1;transform:none;filter:none}}
+.w-dots{display:block;width:52px;height:10px;margin:0 auto 20px;opacity:.55;
+  background-image:radial-gradient(var(--w-moss-hi) 1.7px, transparent 1.7px);background-size:9px 9px}
+.w-cap{display:inline-block;position:relative;padding:13px 32px;border-radius:999px;
+  border:1px solid rgba(242,239,226,.16);
+  background:radial-gradient(120% 150% at 50% 120%, rgba(31,139,127,.16), transparent 70%)}
+/* the bright underline the reference capsule has */
+.w-cap::after{content:'';position:absolute;left:22%;right:22%;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(242,239,226,.75),transparent)}
+/* The real logotype, not type set to look like it. A drop-shadow rather than a
+   text-shadow, because it is a picture — same halo, and it follows the letter
+   shapes instead of a box. */
+.login-logo{display:block;width:clamp(210px,44vw,330px);height:auto;
+  animation:wglow 6s ease-in-out infinite}
+@keyframes wglow{
+  0%,100%{filter:drop-shadow(0 0 12px rgba(242,239,226,.30)) drop-shadow(0 0 40px rgba(31,139,127,.30))}
+  50%    {filter:drop-shadow(0 0 18px rgba(242,239,226,.48)) drop-shadow(0 0 58px rgba(31,139,127,.46))}}
+
+/* ── the dock ──
+   Rises into the scene once the mark has settled, so the first thing anyone
+   sees is the studio's name rather than a form. */
+.w-dock{position:relative;z-index:3;width:392px;max-width:100%;margin-top:44px;
+  display:flex;flex-direction:column;gap:13px;
+  opacity:0;transform:translateY(26px);
+  animation:wdock .62s cubic-bezier(.2,.8,.24,1) 2.05s both}
+@keyframes wdock{to{opacity:1;transform:none}}
+#login.w-solo .w-dock,#login.w-solo .w-gear{display:none}
+/* Everything on this screen is centred on one axis — the mark, the labels, the
+   fields, the button. It is a poster with a form in it, not a form. */
+.w-dock{text-align:center}
+.w-row label{display:block;font-size:9.5px;font-weight:500;letter-spacing:.16em;
+  text-transform:uppercase;color:rgba(242,239,226,.5);margin-bottom:7px}
+.w-row input{width:100%;padding:13px 14px;font-size:14px;border-radius:13px;text-align:center;
+  background:rgba(6,11,9,.62);border:1px solid rgba(242,239,226,.24);color:var(--w-cream);
+  -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+.w-row input::placeholder{color:rgba(242,239,226,.3)}
+.w-row input:focus{border-color:rgba(195,224,122,.55);background:rgba(242,239,226,.09);
+  box-shadow:0 0 0 3px rgba(93,129,41,.22)}
+
+/* the code, one character per box */
+.w-code{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.w-code input{width:100%;padding:0;height:54px;text-align:center;border-radius:13px;
+  font-family:var(--font-dot);font-weight:900;font-size:22px;letter-spacing:0;
+  text-transform:uppercase;color:var(--w-cream);
+  background:rgba(242,239,226,.07);border:1px solid rgba(242,239,226,.19);
+  transition:border-color .16s,background .16s,box-shadow .16s}
+.w-code input:focus{border-color:rgba(195,224,122,.7);background:rgba(242,239,226,.1);
+  box-shadow:0 0 0 3px rgba(93,129,41,.24)}
+.w-code input.on{border-color:rgba(195,224,122,.4)}
+/* the real field the API reads — present and fillable, never in the way */
+.w-code-real{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;padding:0;border:0}
+.w-hide{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+
+/* the one button: the height of the navigation bar, and the only lit surface */
+.login-btn{width:100%;height:58px;border-radius:19px;margin-top:5px;
+  font-family:var(--font-b);font-weight:500;font-size:15px;letter-spacing:.02em;
+  color:#0a0f0c;background:linear-gradient(180deg,#ffffff 0%,#f6f5ea 56%,#e9ebda 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.5),0 14px 40px rgba(31,139,127,.30),0 0 58px rgba(255,255,255,.13);
+  transition:transform .14s ease, box-shadow .2s ease}
+.login-btn:hover{transform:translateY(-1px);
+  box-shadow:0 0 0 1px rgba(255,255,255,.66),0 18px 48px rgba(195,224,122,.30),0 0 74px rgba(255,255,255,.20)}
+.login-btn:active{transform:translateY(0)}
+.login-btn:disabled{opacity:.62;cursor:wait;transform:none}
+
+.login-err{border-radius:13px;padding:11px 14px;font-size:12.5px;line-height:1.55;display:none;text-align:center;
+  background:rgba(192,64,92,.14);color:#f5a8b8;border:1px solid rgba(192,64,92,.45)}
+.login-err.ok{background:rgba(31,139,127,.14);color:#8fd8cb;border-color:rgba(31,139,127,.5)}
+
+/* first-run only: the sheet URL. Everything else that used to be printed here
+   — taglines, the code-request note, remember-me, the connected URL — is gone. */
+.lfield label{display:block;font-size:9.5px;font-weight:500;letter-spacing:.16em;
+  text-transform:uppercase;color:rgba(242,239,226,.5);margin-bottom:7px;padding-left:2px}
+.lfield input{width:100%;padding:13px 14px;border-radius:13px;
+  background:rgba(6,11,9,.62);border:1px solid rgba(242,239,226,.24);color:var(--w-cream);
+  -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+.lfield details{margin-top:8px;font-size:11.5px;color:rgba(242,239,226,.45)}
+.lfield summary{cursor:pointer;color:var(--w-moss-hi);font-weight:500}
+
+/* the escape hatch, folded into a corner instead of a paragraph */
+.w-gear{position:absolute;right:16px;bottom:14px;z-index:4;width:34px;height:34px;border-radius:99px;
+  color:rgba(242,239,226,.42);border:1px solid rgba(242,239,226,.13);font-size:14px;line-height:1;
+  animation:wdock .5s ease 2.5s both}
+.w-gear:hover{color:var(--w-cream);border-color:rgba(242,239,226,.3)}
+.w-conn{position:absolute;right:16px;bottom:56px;z-index:4;width:min(330px,calc(100% - 32px));
+  padding:13px 15px;border-radius:15px;display:none;
+  background:rgba(9,14,12,.9);border:1px solid rgba(242,239,226,.13);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.w-conn.open{display:block}
+.saved-url{font-size:11px;color:rgba(242,239,226,.45);word-break:break-all}
+.saved-url b{color:rgba(242,239,226,.7);font-weight:500}
+.changelink{font-size:11.5px;margin-top:9px}
+#login a{color:var(--w-moss-hi)}
+.gwrap{display:none}
+
+/* On a wide screen the composition follows the reference: the mark high, the
+   controls low, and the meadow burning away underneath in between. */
+@media (min-width:741px){
+  #login{justify-content:center}
+  .w-dock{margin-top:min(9vh,74px)}
+}
+@media (max-width:740px){
+  #login{padding:0 18px calc(20px + env(safe-area-inset-bottom));justify-content:center}
+  .w-mark{margin:0}
+  .w-dock{margin:30px 0 0;width:100%}
+  .w-code{gap:7px}
+  .w-code input{height:52px;font-size:20px}
+  /* A phone is tall and narrow: the desktop bloom sits below the fold behind
+     the controls, leaving the top half flat black. Everything moves up so the
+     light is behind the mark and the meadow still burns around the button. */
+  .w-bloom{background:
+    radial-gradient(104% 32% at 50% 60%, rgba(31,139,127,.44), rgba(13,74,74,.20) 50%, transparent 76%),
+    radial-gradient(150% 56% at 50% 108%, rgba(13,74,74,.50), transparent 74%)}
+  .w-meadow{background:
+    radial-gradient(76% 12% at 50% 100%, rgba(214,236,150,.55), rgba(122,163,55,.24) 52%, transparent 80%),
+    radial-gradient(130% 19% at 50% 105%, rgba(93,129,41,.46), transparent 72%),
+    linear-gradient(180deg, transparent 64%, rgba(7,13,11,.38) 88%, #050907 100%)}
+  .w-stars{opacity:.6;
+    -webkit-mask-image:radial-gradient(98% 48% at 50% 29%, #000 22%, transparent 86%);
+    mask-image:radial-gradient(98% 48% at 50% 29%, #000 22%, transparent 86%)}
+  /* the portrait crop of the artwork — the landscape one loses the meadow
+     entirely once a phone crops it to a 9:19.5 frame */
+  .w-photo{background-image:url("bg/welcome-tall.jpg")}
+}
+@media (prefers-reduced-motion:reduce){
+  .w-mark,.w-dock,.w-gear{animation:none;opacity:1;transform:none}
+  .login-logo,.w-stars{animation:none}
+  #login{transition:none}
+}
+
+/* ── shell ─────────────────────────── */
+#app{display:none;grid-template-columns:226px 1fr;height:100vh}
+#app.ready{display:grid}
+#rail{background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px;overflow-y:auto}
+.logo{display:block;width:150px;height:auto;margin:0 10px 2px}
+/* The logotype ships white — the only colour it comes in. In light mode a pure
+   inversion of a pure white gives pure ink, so no second file is needed. */
+[data-theme="light"] #app .brandmark{filter:invert(1)}
+.logo-sub{font-size:9.5px;color:var(--muted);padding:0 10px 22px;letter-spacing:.14em;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 11px;border-radius:11px;color:var(--muted);font-weight:500;margin-bottom:3px;font-size:13px}
+.nav-btn:hover{background:var(--soft);color:var(--ink)}
+.nav-btn.active{background:var(--soft);color:var(--ink)}
+.nav-btn .ic{width:17px;text-align:center;font-size:13px}
+.nav-badge{margin-left:auto;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:500;border-radius:99px;padding:1px 7px}
+#newtask-btn{margin-top:16px;background:var(--accent);color:var(--accent-ink);font-weight:500;border-radius:11px;padding:11px;text-align:center;letter-spacing:.02em}
+#newtask-btn:hover{filter:brightness(.94)}
+#bulk-btn{margin-top:8px;padding:10px;border:1px dashed var(--pill-line);border-radius:11px;font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--muted);text-align:center}
+#bulk-btn:hover{border-color:var(--accent);color:var(--accent)}
+.rail-spacer{flex:1}
+.acct{border:1px dashed var(--pill-line);border-radius:12px;padding:12px;margin-top:14px;font-size:11.5px;line-height:1.6}
+.acct b{color:var(--ink)}
+.acct .links{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.acct a{text-decoration:none;font-weight:500}
+.acct a:hover{text-decoration:underline}
+.acct .out{margin-top:10px;display:flex;gap:7px}
+.acct .out button{border:1px solid var(--pill-line);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--muted)}
+.acct .out button:hover{border-color:var(--accent);color:var(--accent)}
+
+#main{display:flex;flex-direction:column;overflow:hidden}
+#topbar{display:flex;align-items:center;gap:14px;padding:14px 28px;background:var(--card);border-bottom:1px solid var(--line)}
+#view-title{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:-.01em}
+#topbar .sub{color:var(--muted);font-size:11.5px;margin-top:1px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+#sync{font-size:10.5px;color:var(--muted);border:1px solid var(--pill-line);border-radius:99px;padding:4px 11px;white-space:nowrap;letter-spacing:.04em}
+#sync.busy{color:var(--accent);border-color:var(--accent)}
+#sync.off{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+/* Stale is amber, not alarm-coloured: the board is a few minutes old, which is
+   worth noticing and is not an emergency. `off` is kept for a genuine, lasting
+   failure — nothing routine should ever reach it. */
+#sync.stale{color:var(--s-review);border-color:color-mix(in srgb,var(--s-review) 45%,var(--line));cursor:help}
+.iconbtn{width:34px;height:34px;border:1px solid var(--pill-line);border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted)}
+.iconbtn:hover{border-color:var(--accent);color:var(--accent)}
+#bell{position:relative}
+#bell-count{position:absolute;top:-4px;right:-4px;background:var(--accent);color:var(--accent-ink);font-size:9px;font-weight:500;border-radius:99px;padding:1px 5px;min-width:15px;text-align:center}
+.userchip{display:flex;align-items:center;gap:10px}
+.avatar{border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-weight:500;color:#fff;flex:none}
+.userchip .un{font-weight:500;font-size:12.5px;line-height:1.2}
+.role-pill{display:inline-block;border:1px solid var(--pill-line);border-radius:99px;padding:1.5px 9px;font-size:9px;font-weight:500;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+#content{flex:1;overflow-y:auto;padding:24px 28px 44px}
+
+/* ── greeting ──────────────────────── */
+.greet .hi{font-size:12px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+.greet .name{font-family:var(--font-display);font-weight:700;font-size:52px;letter-spacing:-.02em;line-height:1;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.greet .line{color:var(--muted);font-size:13px;margin:6px 0 22px}
+.dotsep{height:10px;margin:2px 0 22px;background-image:radial-gradient(var(--pill-line) 1.2px, transparent 1.3px);background-size:9px 9px;background-repeat:repeat-x;background-position:0 center}
+
+/* ── overview grid ─────────────────── */
+.ov-grid{display:grid;grid-template-columns:1fr 318px;gap:16px;align-items:start}
+.ov-grid>*{min-width:0}
+@media (max-width:1220px){.ov-grid{grid-template-columns:1fr}}
+
+/* ── kpi cards ─────────────────────── */
+/* ── the stat rail ─────────────────────
+   Five boxed KPIs used to open the dashboard, all the same size, so the eye had
+   nowhere to land — the one that meant "act" looked exactly like the one that
+   meant "nice week". They are now a single quiet rail below the queue: still a
+   glance, no longer the headline, and each one filters the list it counts. */
+.statrail{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px}
+.stat{display:flex;align-items:baseline;gap:7px;background:var(--card);border:1px solid var(--line);
+  border-radius:99px;padding:6px 14px 6px 12px;cursor:pointer;box-shadow:var(--shadow);
+  transition:border-color .15s,transform .12s}
+.stat:hover{border-color:var(--pill-line);transform:translateY(-1px)}
+.stat .sn{font-family:var(--font-dot);font-weight:700;font-size:17px;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;line-height:1}
+.stat .sl{font-size:9.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.stat-hot .sn{color:var(--s-late)}
+.stat-hot{border-color:color-mix(in srgb,var(--s-late) 40%,var(--line))}
+
+/* ── needs you ─────────────────────────
+   The one panel that answers "what am I meant to do now". Each row carries the
+   reason it is here, because "why is this in front of me" is the question a
+   list of task titles cannot answer. */
+.needs{padding-bottom:8px}
+.nrow{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:11px;
+  padding:9px 4px 9px 11px;border-top:1px solid var(--line);cursor:pointer;position:relative}
+.nrow:first-of-type{border-top:0}
+.nrow::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:99px;background:var(--muted)}
+.nrow.n-late::before{background:var(--s-late)}
+.nrow.n-review::before{background:var(--s-review)}
+.nrow.n-fix::before{background:var(--s-late);opacity:.7}
+.nrow.n-new::before{background:var(--accent)}
+.nrow.n-today::before{background:var(--ink)}   /* same ink the in-progress row bar uses */
+.nrow:hover{background:var(--soft)}
+.nwhy{font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;color:var(--muted)}
+.n-late .nwhy{color:var(--s-late)}
+.n-review .nwhy{color:var(--s-review)}
+.n-new .nwhy{color:var(--accent)}
+.ntt{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntt small{display:block;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.03em;margin-top:2px}
+/* The CTA has to read as a button. It is the only control in the row and the
+   row itself is clickable, so without an outline it looks like a label. */
+.nbtn{padding:6px 14px;font-size:10.5px;letter-spacing:.07em;border:1px solid var(--pill-line);
+  border-radius:99px;background:var(--card);font-weight:500;white-space:nowrap}
+.nrow:hover .nbtn{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.n-late .nbtn,.n-new .nbtn{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));color:var(--accent)}
+.n-late:hover .nbtn,.n-new:hover .nbtn{background:var(--accent);border-color:var(--accent);color:#fff}
+.nmore{margin:8px 0 6px}
+.needs-clear .clear-note{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0 20px;text-align:center}
+.clear-note b{font-size:14px}
+.clear-note span:last-child{font-size:11.5px;color:var(--muted)}
+.clear-dots{width:72px;height:22px;opacity:.5;margin-bottom:6px}
+
+/* ── panels & chips ────────────────── */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;margin-bottom:14px;box-shadow:var(--shadow)}
+.panel h3{font-size:11px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel h3 .count{color:var(--muted);font-weight:500}
+.panel h3 .right{margin-left:auto;font-size:10px;color:var(--muted);letter-spacing:.08em;font-weight:500}
+.empty{color:var(--muted);font-size:12.5px;padding:8px 0}
+.chip{display:inline-block;border-radius:99px;padding:2.5px 10px;font-size:9.5px;font-weight:500;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase}
+.p-Urgent{background:var(--accent);color:var(--accent-ink)}
+.p-High{border:1px solid var(--pill-line);color:var(--ink)}
+.p-Medium{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.p-Low{border:1px solid var(--pill-line);color:var(--muted)}
+.s-chip{border:1px solid var(--pill-line);color:var(--muted)}
+.s-done{background:var(--s-good-soft);color:#2f4a06;border:1px solid var(--s-good-soft);font-weight:500}
+.s-review{border:1px solid var(--s-review);color:var(--s-review);background:transparent}
+.s-rejected{border:1px solid var(--s-late);color:var(--s-late)}
+
+.rvq{display:flex;align-items:center;gap:12px;padding:11px 8px;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:8px}
+.rvq:hover{background:var(--soft)}
+.rvq:last-child{border-bottom:none}
+.rvq-id{color:var(--accent);font-size:13px;white-space:nowrap}
+.rvq-b{flex:1;min-width:0}
+.rvq-t{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvq-m{font-size:11px;color:var(--muted);margin-top:2px}
+.rvq-go{color:var(--muted)}
+#rv-ver{padding:7px 10px;border-radius:9px;font-size:12px}
+.od-chip{background:var(--s-late);color:#fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.team-dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:6px;vertical-align:0}
+
+/* ── overdue strip ─────────────────── */
+.od-strip{background:var(--s-late);color:#fff;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.od-dot{width:9px;height:9px;border-radius:99px;background:var(--accent-ink);animation:pulse 1.4s infinite}
+.od-strip b{font-family:var(--font-dot);font-weight:900;letter-spacing:.08em;text-transform:uppercase;font-size:12.5px}
+.od-pill{background:rgba(255,255,255,.18);border-radius:99px;padding:4px 12px;font-size:11.5px;cursor:pointer}
+[data-theme="dark"] .od-pill{background:rgba(0,0,0,.22)}
+.od-pill:hover{filter:brightness(1.1)}
+
+/* ── task rows ─────────────────────── */
+.ttabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.ttab{padding:7px 12px;font-size:11.5px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.ttab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.trow{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
+.trow:last-child{border-bottom:none}
+.trow:hover{background:var(--soft)}
+/* One state vocabulary: a 3px bar you learn once and then never read a status
+   word again. Density varies with urgency — late is heavier, finished recedes. */
+.trow{border-left:3px solid transparent;padding-left:9px;transition:opacity .15s}
+.trow--late{border-left-color:var(--s-late)}
+.trow--review{border-left-color:var(--s-review-soft)}
+.trow--now{border-left-color:var(--ink)}
+.trow--new{border-left-color:var(--muted)}
+.trow--hold{border-left-color:var(--pill-line)}
+.trow--done{border-left-color:var(--s-good-soft);opacity:.55}
+.trow--done .tt{font-weight:500}
+.trow--done:hover{opacity:1}
+.trow--late .tt{font-weight:500}
+.trow .tid{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;width:56px;flex:none;letter-spacing:.03em}
+.trow .tt{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.trow .tt small{display:block;font-weight:500;color:var(--muted);font-size:10.5px;margin-top:1px}
+.trow .due{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:500}
+.trow .due.ok{color:var(--muted);font-weight:500}
+.trow .due.late{color:var(--s-late);font-weight:500}
+
+table.tasks{width:100%;border-collapse:collapse}
+table.tasks th{font-size:9.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:500}
+table.tasks td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.tasks tr.rowlink{cursor:pointer}
+table.tasks tr.rowlink:hover{background:var(--soft)}
+table.tasks tr.overdue-row td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filters input[type=search]{min-width:200px}
+.mini-sel{padding:5px 8px;font-size:12px;border-radius:8px}
+
+/* ── right rail widgets ────────────── */
+.notif-item{display:flex;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--soft);border-radius:8px}
+.notif-item .ni{width:30px;height:30px;border:1px solid var(--pill-line);border-radius:99px;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px}
+.notif-item.hot .ni{border-color:var(--s-late);color:var(--s-late)}
+.notif-item.hot .dot{background:var(--s-late)}
+.notif-item .nt{color:var(--muted);font-size:10.5px;margin-top:2px}
+.notif-item .dot{width:7px;height:7px;border-radius:99px;background:var(--muted);flex:none;margin-top:5px}
+.mcal{width:100%;border-collapse:collapse;text-align:center;font-size:11px}
+.mcal th{color:var(--muted);font-weight:500;font-size:9.5px;letter-spacing:.08em;padding:4px 0}
+.mcal td{padding:2px 0}
+.mcal .dcell{width:32px;height:30px;line-height:30px;border-radius:9px;cursor:pointer;position:relative;display:inline-block}
+.mcal .dcell:hover{background:var(--soft)}
+.mcal .dim{color:var(--muted);opacity:.45}
+.mcal .today{background:var(--ink);color:var(--bg);font-weight:500}
+.mcal .has::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:99px;background:var(--accent)}
+.mcal-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mcal-head b{font-family:var(--font-dot);font-weight:900;letter-spacing:.06em;font-size:13px;text-transform:uppercase}
+.mcal-head button{color:var(--muted);padding:2px 8px;border:1px solid var(--pill-line);border-radius:8px;font-size:11px}
+
+/* ── workload bars ─────────────────── */
+.bar-row{display:grid;grid-template-columns:132px 1fr 74px;gap:10px;align-items:center;margin-bottom:9px;font-size:12px}
+.bar-row .who{display:flex;align-items:center;gap:8px;min-width:0}
+.bar-row .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row>span:last-child{white-space:nowrap;font-size:11px;color:var(--muted);text-align:right}
+.bar-track{background:var(--soft);border-radius:99px;height:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px}
+
+/* ── calendar ──────────────────────── */
+.cal-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.cal-head h2{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.cal-nav{display:flex;gap:4px}
+.cal-nav button,.ghostbtn{border:1px solid var(--pill-line);background:var(--card);border-radius:99px;padding:6px 13px;font-weight:500;font-size:12px}
+.cal-nav button:hover,.ghostbtn:hover{border-color:var(--accent);color:var(--accent)}
+.legend{margin-left:auto;display:flex;gap:12px;font-size:10.5px;color:var(--muted);align-items:center;flex-wrap:wrap;letter-spacing:.04em}
+.lg-dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.od-lane{background:var(--accent-soft);border:1px dashed var(--s-late);border-radius:var(--radius);padding:10px 13px;margin-bottom:10px}
+.od-lane .lbl{font-size:9.5px;font-weight:500;color:var(--s-late);letter-spacing:.12em;margin-bottom:8px;text-transform:uppercase}
+.od-lane-items{display:flex;gap:8px;flex-wrap:wrap}
+.cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;position:relative;box-shadow:var(--shadow)}
+.cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(116px,1fr));min-width:900px}
+.cal-day-head{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line);border-left:1px solid var(--line);font-size:10px;color:var(--muted);position:sticky;top:0;background:var(--card);z-index:5;letter-spacing:.1em;text-transform:uppercase}
+.cal-day-head b{display:block;font-family:var(--font-dot);font-weight:900;font-size:16px;color:var(--ink);letter-spacing:.03em}
+.cal-day-head.today b{color:var(--accent)}
+.cal-gutter{border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:5}
+.time-cell{height:var(--slot);font-size:9.5px;color:var(--muted);text-align:right;padding:2px 7px 0 0;border-top:1px solid var(--line)}
+.day-col{position:relative;border-left:1px solid var(--line);background:
+  repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--slot) - 1px),var(--line) calc(var(--slot) - 1px),var(--line) var(--slot))}
+.day-col.today{background-color:var(--accent-soft)}
+.day-col.droptarget{outline:2px dashed var(--accent);outline-offset:-2px}
+.cal-task{position:absolute;left:4px;right:4px;background:var(--card2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:9px;padding:4px 8px;font-size:11px;overflow:hidden;cursor:grab;box-shadow:var(--shadow);user-select:none;touch-action:none}
+.cal-task:hover{box-shadow:0 4px 14px rgba(27,27,27,.14);z-index:4}
+.cal-task.done{opacity:.5;text-decoration:line-through}
+.cal-task.late{background:var(--accent-soft);border-color:var(--accent);border-left-color:var(--accent) !important}
+.cal-task .ct-t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}
+.cal-task .ct-m{color:var(--muted);font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:3;pointer-events:none}
+.now-line::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:99px;background:var(--accent)}
+.drag-ghost{position:fixed;z-index:99;pointer-events:none;opacity:.92;width:180px;transform:rotate(1.5deg);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.cal-hint{font-size:11px;color:var(--muted);margin-top:9px}
+
+/* ── reports ───────────────────────── */
+.rep-head{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px;margin-bottom:14px}
+/* ── number blocks (Reports) ──
+   Hierarchy by SIZE, not by weight: the figure is large and light, the name is
+   small and quiet. Nothing here is bold — a screen of bold numbers has no
+   emphasis left to spend on the one that matters. */
+/* The grid these tiles live in. It was deleted when the dashboard KPIs became
+   the stat rail, which quietly un-styled every number in Reports — both the
+   "your numbers" row and the combined-team panels, which stacked into a plain
+   list of label/value pairs. */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px}
+/* Each figure gets its own box. Laid bare on the panel they ran together into
+   a field of numbers with nothing separating one measure from the next — the
+   card is what makes "12 tasks given" a single readable object. */
+.kpi{min-width:0;background:var(--card2);border:1px solid var(--line);
+  border-radius:var(--radius);padding:13px 14px 12px;box-shadow:var(--shadow)}
+.kpi.alert{border-color:color-mix(in srgb,var(--s-late) 45%,var(--line))}
+.kpi .k-v{font-family:var(--font-dot);font-size:31px;font-weight:700;line-height:1.05;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;margin-bottom:3px}
+.kpi .k-l{font-size:9.5px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.kpi .k-s{font-size:10.5px;color:var(--muted);margin-top:2px}
+@media (max-width:740px){ .kpi .k-v{font-size:25px} }
+.kpi .n{font-family:var(--font-dot);font-size:36px;font-weight:700;line-height:1.05;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;margin-bottom:3px}
+.kpi .lbl{font-size:9.5px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.kpi .cap{font-size:10.5px;color:var(--muted);margin-top:2px}
+.kpi .cap.hot{color:var(--s-late)}
+.kpi.alert .n{color:var(--s-late)}
+@media (max-width:740px){ .kpi .n{font-size:28px} }
+/* report tables: every numeric column, not the three that happened to have it */
+table.tasks td,table.tasks th,.rep-tbl td,.rep-tbl th,.log-tbl td,.log-tbl th{font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:1000px){.grid2{grid-template-columns:1fr}}
+svg text{font-family:var(--font-b)}
+
+/* ── bell dropdown ─────────────────── */
+#notif-panel{position:absolute;top:56px;right:96px;width:330px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.18);z-index:60;display:none;max-height:70vh;overflow:auto;padding:6px 12px}
+#notif-panel.open{display:block}
+#notif-panel .nh{padding:10px 2px;border-bottom:1px solid var(--line);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+
+/* ── modal / toast ─────────────────── */
+#overlay{position:fixed;inset:0;background:rgba(20,20,20,.5);display:none;align-items:flex-start;justify-content:center;z-index:80;padding:5vh 16px}
+#overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:18px;width:570px;max-width:100%;max-height:88vh;overflow:auto;padding:24px 26px}
+.modal h2{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.01em;margin-bottom:5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.modal .msub{color:var(--muted);font-size:12px;margin-bottom:16px}
+/* ── ask: the app's own prompt ─────────
+   window.prompt() returns null INSTANTLY in an installed PWA on iOS, which is
+   indistinguishable from Cancel — the send-back note simply never happened and
+   nothing on screen said why. This does the same job everywhere the app runs,
+   and it takes more than one line, which a note explaining nine wrong files
+   badly needed. It sits above #overlay because it opens on top of a task. */
+#ask{position:fixed;inset:0;background:rgba(20,20,20,.55);display:none;align-items:center;justify-content:center;z-index:120;padding:5vh 16px}
+#ask.open{display:flex}
+#ask .modal{width:470px}
+#ask textarea{width:100%;min-height:104px;resize:vertical}
+
+/* ── the brief page ────────────────────
+   The composer is right for eleven tasks out of twelve — "Instagram carousel,
+   Thursday, Maya" does not want a page. This is for the twelfth: a real brief
+   that runs to paragraphs, the client's reference material shown as PICTURES
+   rather than four filenames, and what the campaign already contains sitting
+   in the corner where it keeps the new piece consistent with the last twenty.
+   Same task record either way in — this is only more room to fill it in. */
+#brief{position:fixed;inset:0;background:var(--bg);display:none;z-index:110;overflow:auto}
+#brief.open{display:block}
+.bp{max-width:1180px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+.bp-bar{display:flex;align-items:center;gap:11px;padding:12px 18px;border-bottom:1px solid var(--line);
+  background:var(--card);position:sticky;top:0;z-index:2;flex-wrap:wrap}
+.bp-crumb{font-size:12px;color:var(--muted)}
+.bp-crumb b{color:var(--accent)}
+.bp-grow{flex:1 1 auto}
+.bp-saved{font-family:var(--font-dot);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.bp-cols{display:grid;grid-template-columns:1fr 316px;flex:1 1 auto;align-items:stretch}
+.bp-main{padding:22px 24px 40px;display:flex;flex-direction:column;gap:22px;min-width:0}
+/* The rail's panel runs the full height of the page — it is a side of the
+   sheet, not a floating card — while its CONTENTS stay in view as a long brief
+   scrolls past them. */
+.bp-side{border-left:1px solid var(--line);background:var(--soft);padding:20px 18px 40px}
+.bp-rail{display:flex;flex-direction:column;gap:16px;position:sticky;top:77px}
+.bp-title{background:transparent;border:none;border-bottom:1px solid transparent;color:var(--ink);
+  font:700 27px/1.24 var(--font-b);letter-spacing:-.015em;outline:none;width:100%;padding:2px 0}
+.bp-title::placeholder{color:var(--muted);font-weight:500}
+.bp-title:focus{border-bottom-color:var(--accent)}
+.bp-block{display:flex;flex-direction:column;gap:9px}
+.bp-lab{font-size:10px;font-weight:500;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.bp-lab .c{letter-spacing:0;text-transform:none;font-size:11px;font-weight:400}
+#bp-desc{width:100%;min-height:190px;resize:vertical;line-height:1.65;font-size:14px}
+/* references, shown as pictures */
+.bp-assets{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:11px}
+.bp-as{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);position:relative}
+.bp-as img{display:block;width:100%;height:96px;object-fit:cover;background:var(--soft)}
+.bp-as .ph{height:96px;display:grid;place-items:center;background:var(--soft);font-size:26px;color:var(--muted)}
+.bp-as .an{padding:7px 9px;font-size:11px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bp-as .ak{position:absolute;top:6px;right:6px;font-family:var(--font-dot);font-size:9px;letter-spacing:.08em;
+  text-transform:uppercase;background:rgba(0,0,0,.62);color:#fff;padding:2px 6px;border-radius:5px}
+.bp-as .rm{position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.62);
+  color:#fff;border:none;cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center}
+.bp-as .rm:hover{background:var(--s-late)}
+.bp-drop{border:1.5px dashed var(--pill-line);border-radius:10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;padding:18px 10px;text-align:center;color:var(--muted);
+  cursor:pointer;min-height:124px}
+.bp-drop:hover,.bp-drop.over{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.bp-drop b{font-size:12px;color:var(--ink)}
+.bp-drop span{font-size:10.5px}
+/* links */
+.bp-links{display:flex;flex-direction:column;gap:7px}
+.bp-link{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:8px;padding:8px 11px;font-size:12.5px}
+.bp-link .u{color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.bp-link .x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1}
+.bp-link .x:hover{color:var(--s-late)}
+.bp-addlink{background:none;border:1px dashed var(--pill-line);color:var(--muted);border-radius:8px;
+  padding:9px 11px;font:500 12px var(--font-b);cursor:pointer;text-align:left}
+.bp-addlink:hover{color:var(--accent);border-color:var(--accent)}
+/* the rail */
+.bp-fld{display:flex;flex-direction:column;gap:6px}
+.bp-fld label{font-size:9.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.bp-fld input,.bp-fld select{width:100%}
+.bp-row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.bp-sep{height:1px;background:var(--line)}
+.bp-help{font-size:11px;color:var(--muted);line-height:1.45}
+.bp-ctx{border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+.bp-ctx-h{padding:9px 11px;border-bottom:1px solid var(--line);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted)}
+.bp-ctx-b{padding:10px 11px;display:flex;gap:7px;flex-wrap:wrap}
+.bp-ctx-b .cq{width:52px;height:52px;border-radius:6px;border:1px solid var(--line);object-fit:cover;background:var(--soft)}
+.bp-ctx-f{padding:8px 11px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.bp-ctx-e{padding:12px 11px;font-size:11.5px;color:var(--muted)}
+@media(max-width:900px){
+  .bp-cols{grid-template-columns:1fr}
+  .bp-side{border-left:none;border-top:1px solid var(--line);padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .bp-rail{position:static}
+  .bp-main{padding:18px 15px 24px}
+  .bp-title{font-size:23px}
+}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.f-full{grid-column:1/-1}
+.field label{display:block;font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.09em}
+.field input,.field select,.field textarea{width:100%}
+/* ── the action bar ────────────────────
+   One primary, sitting last where the eye finishes. Everything else is an
+   outline, so there is exactly one filled thing on the row and it is always
+   the move the task is actually waiting for. */
+.modal-actions{display:flex;gap:9px;margin-top:18px;align-items:center;flex-wrap:wrap}
+.ma-gap{flex:1 1 auto}
+/* Close · Save · the primary move wrap as ONE group. Letting them break
+   individually stranded Close on the row above the button it belongs beside. */
+.ma-end{display:flex;gap:9px;margin-left:auto;flex-wrap:nowrap}
+.ma-more{position:relative}
+.mbtn-more{padding:10px 14px;line-height:1}
+.moremenu{position:absolute;bottom:calc(100% + 7px);left:0;z-index:40;min-width:230px;
+  background:var(--card);border:1px solid var(--line);border-radius:13px;padding:6px;
+  box-shadow:0 14px 40px rgba(23,23,23,.19);display:none;flex-direction:column;gap:2px}
+.moremenu.open{display:flex}
+[data-theme="dark"] .moremenu{box-shadow:0 14px 40px rgba(0,0,0,.55)}
+.moremenu .mm{border:0;background:none;text-align:left;padding:9px 11px;border-radius:9px;
+  font-size:12.5px;font-weight:500;letter-spacing:0;width:100%}
+.moremenu .mm:hover{background:var(--soft)}
+.moremenu .mm.btn-warn{background:none;color:var(--s-late)}
+.moremenu .mm.btn-warn:hover{background:var(--soft)}
+.moremenu .mm.btn-danger{background:none;color:var(--s-late)}
+.moremenu .mm.btn-danger:hover{background:var(--s-late);color:#fff}
+.mbtn-primary{box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 32%,transparent)}
+/* Save arrives asleep and wakes on the first edit — it was the brightest thing
+   in the panel while having nothing to save. */
+#save-btn{border:1px solid var(--pill-line);background:var(--card)}
+#save-btn:disabled{opacity:.4;cursor:default}
+#save-btn.btn-p{border-color:transparent;background:var(--accent);color:var(--accent-ink);opacity:1}
+/* ── the task panel: where it is, whose move, who has it ──────────────────
+   Four segments, because the studio's flow has four moments. The one you are
+   at is filled; the ones behind you are quiet ticks; the ones ahead are just
+   outlines. You can read your position without reading a word. */
+.trail{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:12px 0 13px}
+.trs{position:relative;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);padding-top:9px;text-align:center}
+.trs::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:99px;background:var(--line)}
+.trs.done{color:var(--ink)}
+.trs.done::before{background:var(--pill-line)}
+.trs.at{color:var(--accent)}
+.trs.at::before{background:var(--accent)}
+.trs.rej.at{color:var(--s-late)} .trs.rej.at::before{background:var(--s-late)}
+
+/* whose move it is, in a sentence, before anything else */
+.tmove{font-size:13px;line-height:1.5;padding:10px 13px;border-radius:11px;margin-bottom:13px;
+  background:var(--soft);border-left:3px solid var(--pill-line)}
+.tmove.t-act{border-left-color:var(--accent)}
+.tmove.t-review{border-left-color:var(--s-review)}
+.tmove.t-late{border-left-color:var(--s-late)}
+.tmove.t-good{border-left-color:var(--s-good)}
+
+/* who asked, and who is doing it — the first thing anyone wants to know */
+.twho-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px}
+.twho{min-width:0}
+.twho-l{display:block;font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px}
+.twho-n{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0}
+.twho-n b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.twho-n small{display:block;font-size:10px;color:var(--muted);font-weight:400}
+
+/* ── creatives: a version is several files ────────────────────────────────
+   The .cdr the vendor needs, the .pdf for print and the .jpg anyone can
+   actually open are one piece of artwork, so they are shown as one block. The
+   non-previewable ones are named and downloadable and never pretend to be
+   previews — which is exactly the complaint that started this. */
+.crs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:10px}
+/* THE GRAPHIC BOARD IS MASONRY, not a grid of equal boxes. A tall A3 poster and
+   a wide web banner keep their real shape, so the assigner recognises the work
+   instead of decoding thumbnails cropped to a common height. Column flow does
+   this in CSS with no layout library and no measuring. */
+.crs-board{display:block;column-count:4;column-gap:10px;grid-template-columns:none}
+.crs-board .cr{break-inside:avoid;margin:0 0 10px;display:inline-block;width:100%}
+@media(max-width:1180px){.crs-board{column-count:3}}
+@media(max-width:820px){.crs-board{column-count:2}}
+@media(max-width:520px){.crs-board{column-count:1}}
+/* the picture Drive already made - never the file itself */
+/* whether YOU have opened it - the board doubles as a list of what you still
+   owe an answer on */
+.cr-seen,.cr-unseen{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap}
+.cr-seen{color:var(--muted);opacity:.7}
+.cr-unseen{color:var(--s-warn,#e2b45c);background:color-mix(in srgb,var(--s-warn,#e2b45c) 12%,transparent)}
+.cr-gate{font-size:11px;color:var(--s-warn,#e2b45c)}
+.rv-verdict{display:inline-flex;gap:7px}
+.rv-verdict .btn.on{outline:1px solid var(--accent);outline-offset:-1px}
+.cr-t{position:relative;background:var(--soft);min-height:60px;display:block}
+.cr-t img{display:block;width:100%;height:auto}
+.cr-t-none{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:26px 12px;text-align:center;border-bottom:1px solid var(--line)}
+.cr-t-ic{font-size:21px;color:var(--muted);opacity:.7}
+.cr-t-none b{font-size:11.5px;color:var(--muted)}
+.cr-t-s{font-size:10px;color:var(--muted);opacity:.8;line-height:1.4}
+/* the remedy for a file Drive will not render - a picture the designer supplies */
+.cr-addp{margin-top:8px;padding:5px 10px;font-size:10.5px}
+/* one note for the whole drop - sits with the tabs, where the assigner already is */
+.cr-drop{margin-left:auto;color:var(--s-warn,#e2b45c);text-decoration:none;border:1px solid transparent}
+.cr-drop:hover{border-color:var(--s-warn,#e2b45c);border-radius:999px;padding:5px 11px}
+/* THIRTY FILES HAVE TO BE SCANNABLE. A column of rows made the graphic team
+   scroll past work they were trying to compare; a grid puts the whole set in
+   one eyeful. Single column on a phone, where a grid is just a narrow list. */
+@media(max-width:640px){.crs{grid-template-columns:1fr}}
+.cr{position:relative}
+.cr-pick{position:absolute;top:8px;right:8px;z-index:2;display:flex;padding:4px;cursor:pointer}
+.cr-pick input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+.cr-sel{outline:2px solid var(--accent);outline-offset:-2px}
+.cr-h{padding-right:34px}
+.cr-sup{padding:7px 12px;font-size:11px;line-height:1.45;color:var(--muted);
+  background:color-mix(in srgb,var(--s-good) 7%,transparent);border-top:1px solid var(--line)}
+.dz-grp{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.dz-grp label{flex:none;letter-spacing:.02em}
+.dz-grp select{flex:1;min-width:0;font-size:11.5px;padding:6px 8px}
+.dz-sm{padding:14px 12px;margin-bottom:10px}
+.dz-sm .dz-ic{font-size:18px}
+.dz-sm b{font-size:12px}
+.dz-sm .dz-sub{font-size:10.5px}
+.rv-drop{padding:0 2px}
+.cr-tabs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+.cr-tab{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+  padding:5px 12px;font:600 11px/1 inherit;letter-spacing:.03em;cursor:pointer}
+.cr-tab.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.cr-tab-act{margin-left:auto;flex:none;padding:5px 12px;font-size:11px}
+.cr-tab-sel{background:none;border:none;color:var(--muted);font:600 11px inherit;
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:5px}
+.cr-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:34px;margin-bottom:9px;
+  padding:7px 11px;border:1px dashed var(--line);border-radius:8px;font-size:12px}
+.cr-bar .btn{padding:5px 11px;font-size:11px}
+.cr-bar-hint{color:var(--muted);font-size:11px}
+.cr-empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:12px;line-height:1.55;
+  border:1px dashed var(--line);border-radius:8px}
+.fl-row{display:flex;align-items:stretch}
+.fl-row .fl{flex:1;min-width:0}
+.fl-dl{flex:none;background:none;border:none;border-left:1px solid var(--line);color:var(--muted);
+  padding:0 11px;font-size:13px;cursor:pointer}
+.fl-dl:hover{color:var(--accent);background:var(--soft)}
+.fl-dl:disabled{opacity:.5;cursor:default}
+.cr{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card2)}
+.cr-h{display:flex;align-items:baseline;gap:9px;padding:9px 12px;background:var(--soft);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.cr-h b{font-size:12.5px;font-weight:600}
+.cr-m{font-size:10px;color:var(--muted);letter-spacing:.04em}
+.cr-f{display:flex;flex-direction:column}
+/* the decision standing against this creative, said on the block itself */
+.cr-s{margin-left:auto;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.cr-ok{border-color:color-mix(in srgb,var(--s-good) 45%,var(--line))}
+.cr-ok .cr-h{background:color-mix(in srgb,var(--s-good) 10%,var(--soft))}
+.cr-ok .cr-s{color:var(--s-good)}
+.cr-no{border-color:color-mix(in srgb,var(--s-late) 45%,var(--line))}
+.cr-no .cr-h{background:color-mix(in srgb,var(--s-late) 10%,var(--soft))}
+.cr-no .cr-s{color:var(--s-late)}
+.cr-a{display:flex;gap:7px;padding:9px 12px;border-top:1px solid var(--line)}
+.cr-btn{padding:5px 12px;font-size:11px;border:1px solid var(--pill-line);background:var(--card);border-radius:99px}
+.cr-btn:hover{border-color:var(--s-good);color:var(--s-good)}
+.cr-btn.on{background:var(--s-good);border-color:var(--s-good);color:#fff}
+.cr-btn-no:hover{border-color:var(--s-late);color:var(--s-late)}
+.cr-btn-no.on{background:var(--s-late);border-color:var(--s-late);color:#fff}
+.fl{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--ink);text-decoration:none}
+.cr-f .fl:first-child{border-top:0}
+.fl:hover{background:var(--soft)}
+.fl-ic{flex:none;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;background:var(--soft);color:var(--muted)}
+.fl-preview,.fl-video{color:var(--s-good)}
+.fl-source{color:var(--s-review)}
+.fl-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-k{flex:none;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* ── the deliverable drop zone ────────────────────────────────────────────
+   A real target, not a button: the file is the single most common thing anyone
+   attaches, and after a revision round it is the ONLY thing they came here to
+   do. Dashed while idle so it reads as "put something here" rather than as a
+   filled control. */
+.dz{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+  padding:20px 16px;border:1.5px dashed var(--pill-line);border-radius:13px;cursor:pointer;
+  background:var(--soft);transition:border-color .15s,background .15s,transform .12s}
+.dz:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--soft))}
+.dz:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dz.over{border-color:var(--accent);border-style:solid;
+  background:color-mix(in srgb,var(--accent) 14%,var(--soft));transform:scale(1.01)}
+.dz .dz-ic{font-size:20px;line-height:1;color:var(--accent)}
+.dz b{font-size:13px;font-weight:600}
+.dz .dz-sub{font-size:11px;color:var(--muted);max-width:34ch;line-height:1.45}
+/* what is already on the task, named before you are asked to replace it */
+.dz-has{display:flex;align-items:center;gap:9px;font-size:12px;margin-bottom:8px;
+  padding:8px 11px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.dz-tick{color:var(--s-good)}
+.dz-hasname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dz-has a{font-weight:600;white-space:nowrap}
+.dz-rm{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);
+  border-radius:99px;padding:3px 10px;white-space:nowrap}
+.dz-rm:hover{color:var(--s-late);border-color:color-mix(in srgb,var(--s-late) 50%,var(--line))}
+.dz-rm[data-armed="1"]{color:#fff;background:var(--s-late);border-color:var(--s-late)}
+/* the link + Upload row sits under the box, as the typed alternative */
+.dz-link{margin-top:9px}
+@media (max-width:740px){
+  .dz{padding:16px 13px}
+  .dz .dz-sub{font-size:10.5px}
+}
+
+/* the file is the point of the task, so it is the field you land on */
+.t-hero{margin-bottom:11px}
+.t-hero label{color:var(--ink)}
+
+/* Twelve fields that almost never change, folded away. Team, priority, due
+   time and brief are set once at creation; putting them at the same weight as
+   the deliverable is what made this panel feel like a form. */
+.tdet{margin:4px 0 2px;border-top:1px solid var(--line);padding-top:11px}
+.tdet summary{cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);list-style:none;display:flex;align-items:center;gap:7px;padding:3px 0}
+.tdet summary::-webkit-details-marker{display:none}
+.tdet summary::before{content:'▸';font-size:10px;transition:transform .18s}
+.tdet[open] summary::before{transform:rotate(90deg)}
+.tdet summary:hover{color:var(--ink)}
+.tdet .fgrid{margin-top:12px}
+
+/* the quiet confirmation that replaced the Save button */
+.savemark{font-size:11px;color:var(--muted);opacity:0;transition:opacity .2s;align-self:center;
+  letter-spacing:.04em}
+.savemark.on{opacity:1}
+.savemark.bad{color:var(--s-late);font-weight:600}
+
+@media (max-width:740px){ .twho-pair{grid-template-columns:1fr;gap:11px} }
+
+.byline{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;font-weight:500}
+.byline small{display:block;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.03em}
+
+.btn{border-radius:99px;padding:10px 17px;font-weight:500;font-size:12.5px;letter-spacing:.02em}
+.btn:disabled{opacity:.55;cursor:wait}
+.btn-p{background:var(--accent);color:var(--accent-ink)}.btn-p:hover{filter:brightness(.94)}
+.btn-g{border:1px solid var(--pill-line);background:var(--card)}.btn-g:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ok{background:var(--ink);color:var(--bg)}
+.btn-warn{border:1px solid var(--accent);color:var(--accent);background:transparent}
+.btn-danger{border:1px solid var(--pill-line);color:var(--muted);background:transparent}
+.btn-danger:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger.armed{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:pulse 1.4s infinite}
+#toasts{position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 16px;font-size:12.5px;max-width:380px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:tin .25s ease}
+.toast b{color:var(--accent)}
+.toast.err{background:var(--accent);color:var(--accent-ink)}
+.toast.err b{color:var(--accent-ink)}
+@keyframes tin{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+
+@media (max-width:1000px){#app.ready{grid-template-columns:1fr}#rail{flex-direction:row;align-items:center;gap:6px;overflow-x:auto;padding:10px}.rail-spacer,.logo-sub,.acct .links{display:none}.acct{margin:0 0 0 auto;padding:7px}#newtask-btn{margin:0}.greet .name{font-size:30px}#notif-panel{right:10px}}
+
+/* ── phone layout (bottom tab bar) ─────────────────────────── */
+/* Column count is set by renderNav from the actual tab list — a head sees seven
+   tabs plus the + button and the old hard-coded 6 columns overflowed the bar
+   off the side of a phone. */
+/* ══ THE EXPANDABLE BAR (phones) ══════════════════════════════════════════
+   Eight destinations across 390px is not a bar, it is a row of 44px targets
+   with clipped words — and the last two fell off the end of the screen
+   entirely, which is how Calendar and Reports became unreachable on a phone.
+
+   So the bar holds four targets and a detached ＋, and the fourth target grows
+   the pill upward into the whole set with real labels. Nothing was removed. */
+#tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:70;
+  align-items:flex-end;gap:10px;padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+.tb-pill{flex:1;min-width:0;border-radius:22px;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);
+  transition:border-radius .32s cubic-bezier(.2,.8,.24,1)}
+.tb-row{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:5px 6px}
+#tabbar .tb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;
+  border-radius:14px;color:var(--muted);font-weight:500;position:relative;overflow:hidden;
+  transition:background .18s,color .18s}
+/* Icons only in the row — eight legible words will not fit, and half a word is
+   worse than none. The name still ships in the markup for screen readers. */
+#tabbar .tb{font-size:0;letter-spacing:0}
+#tabbar .tb .ic{font-size:20px;line-height:1}
+#tabbar .tb.active{color:var(--accent);background:var(--soft)}
+#tabbar .nb{position:absolute;top:3px;right:18%;background:var(--accent);color:var(--accent-ink);
+  font-size:8.5px;font-weight:500;border-radius:99px;padding:0 5px;line-height:1.5;letter-spacing:0}
+
+/* the detached round button, exactly as in the reference */
+.tb-fab{flex:none;width:54px;height:54px;font-weight:400;border-radius:99px;
+  background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 42%,transparent);
+  transition:transform .3s cubic-bezier(.34,1.4,.5,1),background .2s}
+.tb-fab .plus{font-size:24px;line-height:1;display:block}
+#tabbar.panel .tb-fab{transform:rotate(135deg)}
+
+/* ── expanded ──
+   The grid is laid out at all times and revealed by growing its row track from
+   0fr to 1fr, so the pill animates its own height without anyone measuring
+   anything in JavaScript. */
+.tb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  padding:0 6px;overflow:hidden;
+  max-height:0;opacity:0;
+  transition:max-height .34s cubic-bezier(.2,.8,.24,1),opacity .2s ease,padding .34s}
+#tabbar.panel .tb-grid{max-height:260px;opacity:1;padding:10px 6px 10px}
+#tabbar.panel .tb-pill{border-radius:26px}
+/* The row steps aside rather than sitting under the grid — otherwise the tab
+   you are on appears twice, once named and once not. */
+.tb-row{transition:max-height .3s cubic-bezier(.2,.8,.24,1),opacity .16s ease,padding .3s;
+  max-height:70px;overflow:hidden}
+#tabbar.panel .tb-row{max-height:0;opacity:0;padding-top:0;padding-bottom:0}
+.tg{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 3px 9px;
+  border-radius:14px;color:var(--muted);font-weight:500;position:relative;
+  font-size:9px;letter-spacing:.06em;text-transform:uppercase;line-height:1.25;text-align:center}
+.tg .ic{font-size:19px;line-height:1}
+.tg.on{color:var(--accent);background:var(--soft)}
+.tg:active{background:var(--soft)}
+#tb-scrim{position:fixed;inset:0;z-index:69;background:rgba(4,7,6,.42);opacity:0;pointer-events:none;
+  transition:opacity .26s ease;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);display:none}
+@media (max-width:740px){ #tb-scrim{display:block} }
+#tb-scrim.on{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){
+  .tb-grid,.tb-pill,.tb-fab{transition:none}
+}
+
+/* ── the add pill ─────────────────────────────────────────────────────────
+   Tapping ＋ on a phone expands it into a pill offering Add task / Add
+   project. The two choices SHUFFLE out from under the button rather than
+   appearing at once, so the eye follows where they came from. */
+#tabbar.addopen .tb-fab{transform:rotate(135deg)}
+.add-scrim{position:fixed;inset:0;z-index:74;background:rgba(20,20,15,.34);opacity:0;pointer-events:none;
+  transition:opacity .22s ease;backdrop-filter:blur(1.5px)}
+.add-scrim.on{opacity:1;pointer-events:auto}
+.add-pill{position:fixed;left:50%;transform:translateX(-50%);z-index:75;
+  bottom:calc(78px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:9px;align-items:center}
+.add-pill.on{display:flex}
+.add-pill button{display:flex;align-items:center;gap:10px;white-space:nowrap;
+  background:var(--card);color:var(--ink);border:1px solid var(--line);
+  border-radius:99px;padding:12px 20px 12px 15px;font-weight:500;font-size:14px;
+  box-shadow:0 8px 26px rgba(20,20,15,.22);
+  opacity:0;transform:translateY(26px) scale(.86);
+  animation:pill-in .34s cubic-bezier(.2,1.25,.4,1) forwards}
+.add-pill button:nth-child(1){animation-delay:.02s}
+.add-pill button:nth-child(2){animation-delay:.10s}   /* the shuffle */
+.add-pill button .ic{width:30px;height:30px;border-radius:99px;background:var(--accent);color:var(--accent-ink);
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.add-pill button:active{transform:scale(.97)}
+@keyframes pill-in{to{opacity:1;transform:translateY(0) scale(1)}}
+@media (prefers-reduced-motion:reduce){
+  .add-pill button{animation:none;opacity:1;transform:none}
+  .tb-fab{transition:none}
+}
+#acct-sheet{position:fixed;top:60px;right:10px;width:272px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.2);z-index:75;display:none;padding:14px;font-size:11.5px;line-height:1.65}
+#acct-sheet.open{display:block}
+#acct-sheet .links{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+#acct-sheet a{text-decoration:none;font-weight:500}
+#acct-sheet .out{margin-top:10px;display:flex;gap:7px;flex-wrap:wrap}
+#acct-sheet .out button{border:1px solid var(--pill-line);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--muted)}
+.field-note{padding:9px 11px;background:var(--soft);border-radius:9px;color:var(--muted);font-size:12px;line-height:1.5}
+.mob-list{display:none}
+
+/* ── gallery (Pinterest-style masonry) ───────────────────────────────────
+   CSS columns, not grid: the whole point is that pieces keep their own
+   aspect ratio and tile without gaps. Grid would need a fixed row height or
+   JS measurement, and both look wrong for a portfolio. */
+.gallery{column-count:4;column-gap:14px}
+@media (max-width:1400px){.gallery{column-count:3}}
+@media (max-width:980px){.gallery{column-count:2}}
+@media (max-width:520px){.gallery{column-count:2;column-gap:10px}}
+.g-card{break-inside:avoid;-webkit-column-break-inside:avoid;margin:0 0 14px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);transition:transform .16s,border-color .16s}
+.g-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.g-card img{display:block;width:100%;height:auto;background:var(--soft)}
+.g-noimg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:150px;
+  background:var(--soft);color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.g-noimg .g-ic{font-size:26px}
+.g-meta{padding:9px 11px 11px}
+.g-t{font-weight:500;font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.g-s{color:var(--muted);font-size:10.5px;margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.g-count{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;margin:0 2px 10px}
+
+/* ── campaigns ───────────────────────────────────────────────────────────
+   A campaign card is read at a glance: colour stripe to identify it, the two
+   numbers that matter, and a bar showing how much is behind you. */
+.pj-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.pj-head .g-count{margin:0}
+.pj-head .btn{margin-left:auto}
+.pj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+.pj-card{display:flex;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);transition:transform .16s,border-color .16s;padding:0}
+.pj-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.pj-bar{width:4px;flex:none;align-self:stretch}
+.pj-body{display:flex;flex-direction:column;gap:6px;padding:14px 15px;flex:1;min-width:0}
+.pj-top{display:flex;align-items:center;gap:8px}
+.pj-name{font-weight:500;font-size:14.5px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-client{color:var(--muted);font-size:11.5px;margin-top:-3px}
+.pj-stats{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:2px}
+.pj-stats b{color:var(--ink);font-size:14px}
+.pj-od{color:var(--accent);font-weight:500}
+.pj-done{margin-left:auto}
+.pj-track{display:block;height:5px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:4px}
+.pj-fill{display:block;height:100%;border-radius:99px;transition:width .35s ease}
+.pj-unfiled{margin-top:16px;padding:11px 14px;border:1px dashed var(--pill-line);border-radius:11px;
+  color:var(--muted);font-size:12.5px}
+
+.pj-hero{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.pj-back{flex:none}
+.pj-hero-t{min-width:0;flex:1}
+.pj-hero-name{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.012em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-hero-sub{color:var(--muted);font-size:12px;margin-top:2px}
+.pj-hero-a{display:flex;gap:8px;align-items:center;margin-left:auto}
+.pj-subs{margin-bottom:12px}
+
+.pn-compose{display:flex;gap:9px;align-items:flex-start}
+.pn-compose textarea{flex:1;resize:vertical}
+.pn{display:flex;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.pn:last-child{border-bottom:0}
+.pn-b{flex:1;min-width:0}
+.pn-t{white-space:pre-wrap;margin-top:3px;font-size:13px;line-height:1.6}
+
+@media (max-width:740px){
+  .pj-hero{padding:12px}
+  .pj-hero-a{width:100%;margin-left:0}
+  .pj-hero-a .btn{flex:1}
+  .pn-compose{flex-direction:column}
+  .pn-compose .btn{width:100%}
+}
+.g-end{text-align:center;color:var(--muted);font-size:11.5px;margin:18px 0 6px}
+@media (max-width:740px){
+  #app.ready{grid-template-columns:1fr}
+  #rail{display:none}
+  #tabbar{display:flex}
+  #topbar{padding:10px 14px;gap:8px}
+  #view-title{font-size:16px}
+  #topbar .sub{display:none}
+  #sync{display:none}
+  #refresh-btn{display:none}
+  .userchip{cursor:pointer}
+  .userchip .un,.userchip .role-pill{display:none}
+  #content{padding:16px 14px calc(100px + env(safe-area-inset-bottom))}
+  .greet .name{font-size:29px;gap:9px}
+  .ov-grid{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .rep-head select{flex:1}
+  #overlay{padding:0;align-items:flex-end}
+  #ask{padding:0;align-items:flex-end}
+  .modal{width:100%;max-height:94vh;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom))}
+  #notif-panel{left:8px;right:8px;width:auto;top:56px}
+  .filters input[type=search]{min-width:120px;flex:1}
+  .od-strip{font-size:12px}
+  html,body{overflow-x:hidden}
+  #content{overflow-x:hidden}
+  .greet .name{font-size:clamp(23px,7.5vw,29px)}
+  .panel{padding:13px 13px}
+  /* The rail scrolls sideways rather than wrapping to three ragged lines and
+     pushing the actual work off the first screen. */
+  .statrail{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-14px;padding-inline:14px;
+    /* fade the right edge so it is visible that the rail continues */
+    -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);
+    mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .statrail::-webkit-scrollbar{display:none}
+  .stat{flex:0 0 auto}
+  /* the reason moves above the title — 96px of chip and a title do not both fit */
+  .nrow{grid-template-columns:1fr auto;gap:9px;padding-left:10px}
+  .nwhy{grid-column:1;grid-row:1;font-size:8.5px}
+  .ntt{grid-column:1;grid-row:2;font-size:12.5px}
+  .nbtn{grid-column:2;grid-row:1/3}
+  .trow{gap:8px;padding:9px 4px}
+  .trow .tid{display:none}
+  .trow .tt{font-size:12px}
+  .trow .due{font-size:9.5px;max-width:33%;white-space:normal;text-align:right;line-height:1.35}
+  .chip{padding:2px 7px;font-size:8.5px;letter-spacing:.05em}
+  .bar-row{grid-template-columns:110px 1fr 62px;gap:7px}
+  .tbl-wrap{display:none}
+  .mob-list{display:block}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── the dot motif ────────────────────────────────────────────────────────
+   The wordmark is already a dot-matrix face, so the dot is the one shape this
+   product genuinely owns. It appears three ways and nowhere else: as a quiet
+   ground texture, as the divider, and as every loading state in the app. */
+.dotgrid{
+  background-image:radial-gradient(var(--pill-line) 1px, transparent 1px);
+  background-size:14px 14px;
+  background-position:0 0;
+}
+.dotgrid-soft{
+  background-image:radial-gradient(var(--line) 1px, transparent 1px);
+  background-size:18px 18px;
+}
+
+/* Loading, everywhere. A row of dots lighting in sequence — the wordmark's own
+   texture, moving. Replaces five different "Loading…" strings and the spinner. */
+.dotbar{display:inline-flex;gap:5px;align-items:center;vertical-align:middle}
+.dotbar i{width:6px;height:6px;border-radius:99px;background:var(--pill-line);display:block;
+  animation:dotwave 1.1s ease-in-out infinite}
+.dotbar i:nth-child(2){animation-delay:.09s}
+.dotbar i:nth-child(3){animation-delay:.18s}
+.dotbar i:nth-child(4){animation-delay:.27s}
+.dotbar i:nth-child(5){animation-delay:.36s}
+.dotbar i:nth-child(6){animation-delay:.45s}
+@keyframes dotwave{
+  0%,60%,100%{background:var(--pill-line);transform:scale(1)}
+  30%{background:var(--accent);transform:scale(1.45)}
+}
+.dotload{display:flex;flex-direction:column;align-items:center;gap:11px;padding:26px 0;color:var(--muted);
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+/* A full-width version for the top of a view that is refreshing under you. */
+.dotline{height:2px;width:100%;border-radius:99px;overflow:hidden;background:var(--soft);position:relative}
+.dotline::after{content:'';position:absolute;inset:0;
+  background-image:radial-gradient(var(--accent) 1px, transparent 1px);
+  background-size:8px 2px;animation:dotslide .9s linear infinite}
+@keyframes dotslide{from{background-position:0 0}to{background-position:8px 0}}
+
+@media (prefers-reduced-motion:reduce){
+  .dotbar i{animation:none;background:var(--accent);opacity:.55}
+  .dotline::after{animation:none}
+}
+
+/* ── floating glass navigation (phones) ───────────────────────────────────
+   The bar lifts off the bottom edge and floats, so content scrolls visibly
+   beneath it instead of ending at a hard rail. Translucent with a blur, which
+   is why it needs a solid fallback: without backdrop-filter a 72%-alpha bar
+   over text is unreadable. */
+@media (max-width:740px){
+  #tabbar{
+    left:0; right:0;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+  }
+  /* The glass is on the PILL now, not on the bar — the bar is only a layout row
+     holding the pill and the detached button, and blurring it would smear a
+     rectangle behind the round one too. */
+  .tb-pill{
+    background:color-mix(in srgb, var(--card) 76%, transparent);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5);
+    backdrop-filter:blur(20px) saturate(1.5);
+    box-shadow:0 10px 34px rgba(23,23,23,.16), 0 1px 0 rgba(255,255,255,.5) inset;
+  }
+  [data-theme="dark"] .tb-pill{
+    box-shadow:0 10px 34px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.06) inset;
+  }
+  /* content must clear the floating bar, not sit under it */
+  #content{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  @media (max-width:740px){ .tb-pill{background:var(--card)} }
+}
+
+@media print{
+  #rail,#topbar,.filters,.rep-head,.cal-hint,#toasts,#notif-panel,#login{display:none!important}
+  #app.ready{display:block}#content{overflow:visible;padding:0}
+  body{background:#fff;color:#1b1b1b}.panel{border:none;padding:8px 0;break-inside:avoid}
+  /* paper always gets the full table, never the phone card list — otherwise
+     printing from a narrow window silently drops every column but the title */
+  .tbl-wrap{display:block!important;overflow:visible!important}
+  .mob-list{display:none!important}
+  table.tasks{width:100%;border-collapse:collapse}
+  table.tasks tr{break-inside:avoid}
+}
+
+/* ── review room (v3.1) ─────────────── */
+#review{position:fixed;inset:0;background:var(--bg);z-index:85;display:none;flex-direction:column}
+#review.open{display:flex}
+.rv-loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;letter-spacing:.1em;height:100%;text-align:center;padding:20px}
+.rv-top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card);flex-wrap:wrap}
+.rv-org{font-size:15px;letter-spacing:.08em}
+.rv-org span{color:var(--accent)}
+.rv-title{display:flex;align-items:baseline;gap:10px;min-width:0;flex:1}
+.rv-id{font-size:15px;color:var(--accent);white-space:nowrap}
+.rv-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.rv-body{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+.rv-media{background:#101010;display:flex;align-items:center;justify-content:center;padding:18px;min-height:0;overflow:auto;position:relative}
+.ytbox{width:min(1200px,100%);aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
+.ytbox iframe{width:100%;height:100%;border:0}
+.dvbox{width:min(1200px,100%);height:100%;min-height:320px;background:#000;border-radius:12px;overflow:hidden}
+.dvbox iframe{width:100%;height:100%;border:0}
+.img-wrap{position:relative;max-width:min(1200px,100%);cursor:crosshair;user-select:none;-webkit-user-select:none}
+.img-wrap img{display:block;width:100%;height:auto;border-radius:10px}
+#pin-layer{position:absolute;inset:0}
+.pin{position:absolute;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11.5px;font-weight:500;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 1px 6px rgba(0,0,0,.45);cursor:pointer;border:2px solid #fff}
+.pin.res{background:#256b36}
+.pin.hot{animation:pinpulse 1s infinite}
+@keyframes pinpulse{0%,100%{box-shadow:0 0 0 0 rgba(235,91,45,.75)}50%{box-shadow:0 0 0 14px rgba(235,91,45,0)}}
+.rv-nofile{color:#8f8d86;text-align:center;max-width:440px;font-size:13px;line-height:1.75}
+.rv-side{border-left:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;min-height:0}
+.rv-tools{padding:12px 14px;border-bottom:1px solid var(--line)}
+.rv-tools .hint{font-size:11.5px;color:var(--muted);line-height:1.65}
+.rv-tc-row{display:flex;gap:8px}
+.rv-tc-row input{width:84px;text-align:center}
+.rv-form{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:10px 12px}
+.rv-form-h{font-weight:500;font-size:11px;margin-bottom:7px;color:var(--accent);letter-spacing:.06em}
+.rv-form textarea{width:100%}
+.rv-form-a{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.rv-scroll{flex:1;overflow:auto;padding:12px 14px;min-height:0}
+.rv-h{font-size:10px;font-weight:500;letter-spacing:.12em;color:var(--muted);margin:2px 0 8px}
+.rv-h span{font-weight:500;letter-spacing:.02em;margin-left:6px}
+.rv-empty{font-size:12px;color:var(--muted);background:var(--soft);border-radius:10px;padding:10px 12px;margin-bottom:8px;line-height:1.65}
+.mk{display:flex;gap:9px;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 10px;margin-bottom:7px;align-items:flex-start}
+.mk.res{opacity:.62}
+.mk-tc{border:1px solid var(--accent);color:var(--accent);border-radius:8px;font-size:11px;font-weight:500;padding:3px 7px;white-space:nowrap;background:transparent}
+.mk.res .mk-tc{border-color:#256b36;color:#256b36}
+.mk-b{flex:1;min-width:0}
+.mk-t{font-size:12.5px;line-height:1.55;word-break:break-word}
+.mk-m{font-size:10.5px;color:var(--muted);margin-top:3px}
+.mk-a{display:flex;gap:4px}
+.mk-btn{border:1px solid var(--pill-line);border-radius:7px;min-width:24px;height:24px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;flex:none;padding:0 4px}
+.mk-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cm{display:flex;gap:9px;padding:8px 2px;border-bottom:1px dashed var(--line);align-items:flex-start}
+.cm-av{width:26px;height:26px;border-radius:50%;color:#fff;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:none}
+.cm-b{flex:1;min-width:0}
+.cm-m{font-size:10.5px;color:var(--muted)}
+.cm-t{font-size:12.5px;line-height:1.55;margin-top:2px;word-break:break-word}
+.cm-guest{border:1px solid var(--pill-line);border-radius:99px;padding:1px 7px;font-size:9px;letter-spacing:.06em}
+.rv-compose{border-top:1px solid var(--line);padding:11px 14px;background:var(--card)}
+.rv-cm-row{display:flex;gap:8px;align-items:flex-end}
+.rv-cm-row textarea{flex:1;resize:none}
+.guest-name{width:100%;margin-bottom:8px}
+.rv-guest-hint{font-size:11.5px;color:var(--muted);text-align:center}
+.rv-share-wrap{position:absolute;top:58px;right:16px;z-index:10;width:min(390px,92vw)}
+.rv-share{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
+.rv-share-new{display:flex;gap:8px}
+.rv-share-new select{flex:1}
+#rv-share-url{width:100%;margin-top:8px;font-size:11px}
+.rv-share-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.rv-share-row .chip{border:1px solid var(--pill-line);border-radius:99px;padding:3px 9px;font-size:10.5px;margin-right:auto}
+.rv-share-note{font-size:10.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.btn-p.armed{animation:pulse 1.4s infinite}
+@media (max-width:900px){
+  .rv-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr}
+  .rv-side{border-left:none;border-top:1px solid var(--line)}
+  .rv-media{padding:10px}
+  .rv-top{padding:10px 12px}
+  .rv-share-wrap{right:8px;left:8px;width:auto}
+}
+
+/* ── drive upload (v3.2) ─────────────── */
+#upl-card{position:fixed;left:18px;bottom:18px;z-index:95;width:min(340px,86vw)}
+.upl{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 14px 40px rgba(0,0,0,.22);font-size:12px}
+.upl-t{display:flex;align-items:center;gap:8px;margin-bottom:8px;word-break:break-all}
+.upl-x{margin-left:auto;border:1px solid var(--pill-line);border-radius:7px;width:22px;height:22px;font-size:10px;color:var(--muted);flex:none;display:flex;align-items:center;justify-content:center}
+.upl-x:hover{border-color:var(--accent);color:var(--accent)}
+.upl-bar{height:6px;background:var(--soft);border-radius:99px;overflow:hidden}
+.upl-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.upl-m{color:var(--muted);margin-top:7px;font-size:10.5px;line-height:1.5}
+</style>
+  <script type="module" crossorigin src="./assets/index-D_AWNaAZ.js"></script>
+</head>
+<body>
+
+<!-- ── THE WELCOME SCREEN ──────────────────────────────────────────────────
+     The app opens here every time. A night meadow lit from inside: the sky is
+     the product's own dot grid, the horizon glows, and the wordmark sits in it
+     breathing. The controls are NOT part of that picture — they rise into it
+     from below once the scene has settled, so the first thing anyone sees is
+     the studio's name and not a form.
+
+     Everything here is deliberately dark whatever the theme is set to. It is
+     one committed image, not a surface that follows a preference. -->
+<div id="login">
+  <div class="w-sky" aria-hidden="true">
+    <span class="w-stars"></span>
+    <span class="w-bloom"></span>
+    <span class="w-meadow"></span>
+    <!-- The photograph sits ON TOP of the gradient scene, not instead of it.
+         The single-file build (Apps Script's ?page=app, and the exe) has no
+         second request to spend, so the image 404s there and the CSS meadow
+         underneath simply shows through — same colours, same composition, no
+         broken-looking screen. -->
+    <span class="w-photo"></span>
+    <span class="w-vig"></span>
+  </div>
+
+  <div class="w-mark">
+    <span class="w-dots" aria-hidden="true"></span>
+    <div class="w-cap"><img class="login-logo brandmark" alt="Creativeflow" width="560" height="127"></div>
+  </div>
+
+  <div class="w-dock" id="w-dock">
+    <div class="login-err" id="login-err"></div>
+    <!-- v5: Google sign-in markup REMOVED (owner's order in 4.9.2 — code-only
+         login; the old build merely hid it). Do not re-add. Google/Drive still
+         powers uploads; only the login path is gone. -->
+    <div class="w-row"><label for="in-email">Your email</label>
+      <input id="in-email" type="email" placeholder="you@studio.com" autocomplete="email" spellcheck="false"></div>
+    <div class="w-row"><label>Code</label>
+      <div class="w-code" id="w-code">
+        <input inputmode="text" maxlength="1" aria-label="Code character 1">
+        <input inputmode="text" maxlength="1" aria-label="Code character 2">
+        <input inputmode="text" maxlength="1" aria-label="Code character 3">
+        <input inputmode="text" maxlength="1" aria-label="Code character 4">
+        <input inputmode="text" maxlength="1" aria-label="Code character 5">
+        <input inputmode="text" maxlength="1" aria-label="Code character 6">
+      </div>
+      <!-- the real field the API reads; the boxes above write into it, and a
+           paste / autofill / password manager writing here shows up in them -->
+      <input id="in-code" class="w-code-real" maxlength="12" autocomplete="one-time-code" aria-hidden="true" tabindex="-1"></div>
+    <button class="login-btn" id="login-btn">Open</button>
+    <input type="checkbox" id="in-remember" checked class="w-hide">
+  </div>
+
+  <!-- Which sheet this app talks to is set once, by an admin, and then never
+       again. It has no business on the welcome screen, so it lives behind the
+       gear — and on a device that has never been connected the panel opens by
+       itself, because then it IS the first thing to do. -->
+  <button class="w-gear" id="w-gear" type="button" aria-label="Connection settings">⚙</button>
+  <div class="w-conn" id="w-conn">
+    <div class="lfield" id="url-field">
+      <label>Dashboard link (Web app URL)</label>
+      <input id="in-url" placeholder="https://script.google.com/macros/s/…/exec">
+      <details><summary>Where do I get this?</summary>
+        Your admin deploys it once from the master sheet (Extensions ▸ Apps Script ▸ Deploy ▸ Web app) and shares the URL ending in <b>/exec</b>. Full steps are in the guide.
+      </details>
+    </div>
+    <div class="saved-url" id="saved-url" style="display:none"></div>
+    <div class="changelink" id="changelink" style="display:none"><a href="#" id="test-conn">Test connection</a> · <a href="#" id="change-url">Connect to a different sheet</a></div>
+  </div>
+</div>
+
+<div id="app">
+  <aside id="rail">
+    <img class="logo brandmark" alt="Creativeflow" width="560" height="127">
+    <div class="logo-sub" id="org-sub">studio task command</div>
+    <nav id="nav"></nav>
+    <button id="newtask-btn">＋ NEW TASK</button>
+    <button id="bulk-btn" style="display:none">🧺 BULK ADD</button>
+    <div class="rail-spacer"></div>
+    <div class="acct" id="acct"></div>
+  </aside>
+
+  <div id="main">
+    <div id="topbar">
+      <div>
+        <div id="view-title">Dashboard</div>
+        <div class="sub" id="view-sub"></div>
+      </div>
+      <div class="top-right">
+        <span id="sync">—</span>
+        <button class="iconbtn" id="theme-btn" title="Light / dark mode">☀</button>
+        <button class="iconbtn" id="refresh-btn" title="Refresh now">↻</button>
+        <button class="iconbtn" id="bell" title="Notifications">🔔<span id="bell-count"></span></button>
+        <div class="userchip" id="userchip"></div>
+      </div>
+    </div>
+    <div id="notif-panel"></div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- The expandable bar. Collapsed: a pill of three tabs plus a menu, beside a
+     detached round ＋. Expanded: the pill grows upward into every destination
+     with its name, and the round button becomes the way back out. -->
+<div id="tb-scrim" onclick="closeTabPanel()"></div>
+<nav id="tabbar">
+  <div class="tb-pill">
+    <div class="tb-grid" id="tb-grid"></div>
+    <div class="tb-row" id="tb-row"></div>
+  </div>
+  <button class="tb-fab" id="tb-fab" aria-label="Add" onclick="fabClick()"><span class="plus">＋</span></button>
+</nav>
+<div id="acct-sheet"></div>
+
+<!-- MULTIPLE, and no accept filter. It had accept="video/*,image/*", which meant
+     a designer could not even SEE a .cdr, .psd or .ai in the browse dialog -
+     the exact people this is for. The server decides what it will take. -->
+<input type="file" id="upl-file" style="display:none" multiple>
+<div id="upl-card"></div>
+<div id="review"></div>
+<div id="overlay"></div>
+<div id="ask" aria-hidden="true"></div>
+<div id="brief" aria-hidden="true"></div>
+<div id="toasts"></div>
+
+</body>
+</html>

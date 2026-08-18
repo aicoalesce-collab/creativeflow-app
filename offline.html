@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CreativeFlow — offline</title>
+<style>
+  :root{ --bg:#f3f1ec; --card:#fbfaf7; --ink:#1b1b1b; --muted:#8a867c; --accent:#eb5b2d; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#141414; --card:#1d1d1d; --ink:#f2f0eb; --muted:#8f8d86; --accent:#f06a38; } }
+  body{ font-family:Archivo,system-ui,sans-serif; background:var(--bg); color:var(--ink); display:grid; place-items:center; min-height:100vh; margin:0; }
+  .card{ background:var(--card); border-radius:20px; max-width:380px; padding:36px 30px; text-align:center; line-height:1.6; }
+  h1{ font-size:26px; letter-spacing:.06em; } h1 span{ color:var(--accent); }
+  button{ background:var(--accent); color:#fff; border:none; border-radius:11px; padding:12px 22px; font-weight:700; font-size:14px; cursor:pointer; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>CREATIVE<span>FLOW</span></h1>
+  <p><b>You're offline.</b></p>
+  <p style="color:var(--muted)">The task board needs a connection to the sheet. Check your internet and try again.</p>
+  <button onclick="location.reload()">Try again</button>
+</div>
+</body>
+</html>
